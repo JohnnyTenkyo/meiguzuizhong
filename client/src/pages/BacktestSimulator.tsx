@@ -7,7 +7,7 @@ import {
 import { Button } from '@/components/ui/button';
 import StockChart, { BacktestTrade } from '@/components/StockChart';
 import SignalPanel from '@/components/SignalPanel';
-import BacktestStats from '@/components/BacktestStats';
+import EnhancedBacktestStats from '@/components/EnhancedBacktestStats';
 import { fetchStockData, US_STOCKS } from '@/lib/stockApi';
 import { Candle, TimeInterval, CDSignal, BuySellPressure, NXSignal, MomentumSignal } from '@/lib/types';
 import { calculateCDSignals, calculateBuySellPressure, calculateNXSignals, calculateMomentum } from '@/lib/indicators';
@@ -218,6 +218,29 @@ export default function BacktestSimulator() {
     }
   }, [visibleIndex]);
 
+  // Fast forward by N candles
+  const fastForward = useCallback((count: number) => {
+    if (visibleIndex < allCandles.length) {
+      const newIdx = Math.min(visibleIndex + count, allCandles.length);
+      setVisibleIndex(newIdx);
+
+      const newCandle = allCandles[newIdx - 1];
+      if (newCandle && session) {
+        const newDate = new Date(newCandle.time);
+        const dateNum = newDate.getFullYear() * 10000 + (newDate.getMonth() + 1) * 100 + newDate.getDate();
+        if (dateNum !== session.currentDate) {
+          fetch(`/api/backtest/sessions/${sessionId}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ currentDate: dateNum }),
+          }).then(r => r.json()).then(data => {
+            if (data.success) setSession(data.session);
+          });
+        }
+      }
+    }
+  }, [visibleIndex, allCandles, session, sessionId]);
+
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -378,6 +401,12 @@ export default function BacktestSimulator() {
             <Button variant="outline" size="sm" onClick={advanceCandle} disabled={visibleIndex >= allCandles.length}>
               下一根 <ChevronRight size={14} />
             </Button>
+            <Button variant="outline" size="sm" onClick={() => fastForward(5)} disabled={visibleIndex >= allCandles.length} className="hidden md:flex">
+              <Zap size={14} className="mr-1" /> +5
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fastForward(10)} disabled={visibleIndex >= allCandles.length} className="hidden md:flex">
+              <Zap size={14} className="mr-1" /> +10
+            </Button>
             <span className="text-xs text-muted-foreground">
               {visibleIndex}/{allCandles.length} | ← →
             </span>
@@ -443,8 +472,9 @@ export default function BacktestSimulator() {
               {/* Backtest Performance Stats */}
               <div className="pt-3">
                 <h3 className="text-sm font-medium mb-2 text-muted-foreground">回测绩效</h3>
-                <BacktestStats
-                  trades={trades.filter(t => t.symbol === currentSymbol)}
+                <EnhancedBacktestStats
+                  trades={trades}
+                  positions={positions}
                   initialBalance={Number(session.initialBalance)}
                   currentBalance={Number(session.currentBalance)}
                   totalAssets={totalAssets}

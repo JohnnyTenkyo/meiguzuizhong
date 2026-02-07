@@ -173,14 +173,14 @@ export default function Screener() {
         </div>
       </header>
 
-      <main className="container py-6 space-y-6 max-w-4xl">
-        {/* Running/Completed status banner - positioned in content area */}
+      <main className="container py-6 space-y-6 max-w-4xl pb-24 md:pb-6">
+        {/* Running status banner - fixed at bottom on mobile, inline on desktop */}
         {isRunning && currentJob && (
-          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 shadow-lg">
+          <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-primary/30 bg-primary/5 backdrop-blur-md p-3 shadow-lg md:relative md:rounded-lg md:border md:bottom-auto md:left-auto md:right-auto md:z-auto md:p-4">
             <div className="flex items-center gap-3 mb-2">
               <Loader2 size={16} className="animate-spin text-primary" />
               <span className="text-sm font-medium">后台筛选进行中...</span>
-              <span className="text-xs text-muted-foreground ml-auto">
+              <span className="text-xs text-muted-foreground ml-auto hidden md:inline">
                 你可以离开此页面，筛选完成后会在顶部通知你
               </span>
             </div>
