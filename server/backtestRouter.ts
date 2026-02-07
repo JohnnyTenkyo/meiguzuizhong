@@ -44,7 +44,29 @@ backtestApiRouter.get("/sessions", async (req: any, res) => {
       .where(eq(backtestSessions.userId, req.userId))
       .orderBy(desc(backtestSessions.updatedAt));
     
-    return res.json({ success: true, sessions });
+    // For each session, calculate total assets (cash + positions market value)
+    // Note: We can't get real-time prices here, so we use totalCost as approximation
+    // In a real system, you'd fetch current prices for each position
+    const sessionsWithTotalAssets = await Promise.all(sessions.map(async (session) => {
+      const positions = await db.select().from(backtestPositions)
+        .where(eq(backtestPositions.sessionId, session.id));
+      
+      // Sum up all position values (using totalCost as market value approximation)
+      const positionsValue = positions.reduce((sum, pos) => {
+        return sum + Number(pos.totalCost);
+      }, 0);
+      
+      // Total assets = cash + positions value
+      const totalAssets = Number(session.currentBalance) + positionsValue;
+      
+      // Return session with updated currentBalance to reflect total assets
+      return {
+        ...session,
+        currentBalance: String(totalAssets.toFixed(2)),
+      };
+    }));
+    
+    return res.json({ success: true, sessions: sessionsWithTotalAssets });
   } catch (err) {
     console.error("List sessions error:", err);
     return res.json({ success: false, error: "获取存档失败" });

@@ -151,8 +151,10 @@ export default function StockChart({ candles, interval, cdSignals, buySellPressu
     const isIncremental = !intervalChanged && !isInitialRender.current && mainChartApi.current && mainSeriesRef.current.candle && prevCandleCountRef.current > 0;
 
     if (isIncremental) {
-      // Save current zoom/position before updating
-      saveVisibleRange();
+      // Save current zoom/position before updating (only if candles count increased)
+      if (candles.length > prevCandleCountRef.current) {
+        saveVisibleRange();
+      }
 
       // Update data on existing series
       const candleData: CandlestickData[] = candles.map(c => ({
@@ -223,8 +225,10 @@ export default function StockChart({ candles, interval, cdSignals, buySellPressu
         mainSeriesRef.current.cost = costSeries;
       }
 
-      // Restore zoom/position
-      restoreVisibleRange(candles.length);
+      // Restore zoom/position (only if candles count increased)
+      if (candles.length > prevCandleCountRef.current) {
+        restoreVisibleRange(candles.length);
+      }
       prevCandleCountRef.current = candles.length;
       return; // Don't recreate chart
     }
@@ -258,10 +262,10 @@ export default function StockChart({ candles, interval, cdSignals, buySellPressu
     // Ladder
     const ladder = calculateLadder(candles);
     if (ladder.length > 0) {
-      const blueUp = chart.addLineSeries({ color: 'rgba(59, 130, 246, 0.8)', lineWidth: 1, title: '蓝梯A', crosshairMarkerVisible: false });
-      const blueDn = chart.addLineSeries({ color: 'rgba(59, 130, 246, 0.8)', lineWidth: 1, title: '蓝梯B', crosshairMarkerVisible: false });
-      const yellowUp = chart.addLineSeries({ color: 'rgba(234, 179, 8, 0.8)', lineWidth: 1, title: '黄梯A1', crosshairMarkerVisible: false });
-      const yellowDn = chart.addLineSeries({ color: 'rgba(234, 179, 8, 0.8)', lineWidth: 1, title: '黄梯B1', crosshairMarkerVisible: false });
+      const blueUp = chart.addLineSeries({ color: '#3b82f6', lineWidth: 3, title: '蓝梯a1', crosshairMarkerVisible: false });
+      const blueDn = chart.addLineSeries({ color: '#3b82f6', lineWidth: 3, title: '蓝梯b1', crosshairMarkerVisible: false });
+      const yellowUp = chart.addLineSeries({ color: '#fbbf24', lineWidth: 3, title: '黄梯A1', crosshairMarkerVisible: false });
+      const yellowDn = chart.addLineSeries({ color: '#fbbf24', lineWidth: 3, title: '黄梯B1', crosshairMarkerVisible: false });
       blueUp.setData(ladder.map(l => ({ time: toChartTime(l.time, interval), value: l.blueUp })));
       blueDn.setData(ladder.map(l => ({ time: toChartTime(l.time, interval), value: l.blueDn })));
       yellowUp.setData(ladder.map(l => ({ time: toChartTime(l.time, interval), value: l.yellowUp })));
