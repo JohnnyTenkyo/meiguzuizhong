@@ -174,9 +174,9 @@ export default function Screener() {
       </header>
 
       <main className="container py-6 space-y-6 max-w-4xl">
-        {/* Running/Completed status banner */}
+        {/* Running/Completed status banner - positioned in content area */}
         {isRunning && currentJob && (
-          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 shadow-lg">
             <div className="flex items-center gap-3 mb-2">
               <Loader2 size={16} className="animate-spin text-primary" />
               <span className="text-sm font-medium">后台筛选进行中...</span>

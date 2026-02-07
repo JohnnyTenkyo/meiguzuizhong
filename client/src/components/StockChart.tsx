@@ -322,11 +322,16 @@ export default function StockChart({ candles, interval, cdSignals, buySellPressu
     })));
     mainSeriesRef.current.volume = volumeSeries;
 
-    // Initial view: show last 80 bars
-    const barsToShow = Math.min(80, candles.length);
+    // Initial view: position at the latest candle with 50% right padding
+    // Show ~40 bars, but position so the last bar is at the center (leaving right half empty)
+    const barsToShow = Math.min(40, candles.length);
+    const lastBarIndex = candles.length - 1;
+    // Set visible range so the last bar appears at the center
+    // This means we show from (lastBarIndex - barsToShow) to (lastBarIndex + barsToShow)
+    // But since we want the last bar at center, we extend the 'to' beyond the data
     chart.timeScale().setVisibleLogicalRange({
-      from: Math.max(0, candles.length - barsToShow),
-      to: candles.length - 1,
+      from: Math.max(0, lastBarIndex - barsToShow),
+      to: lastBarIndex + barsToShow, // Extend right to create 50% empty space
     } as LogicalRange);
 
     prevCandleCountRef.current = candles.length;
