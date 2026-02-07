@@ -4,6 +4,13 @@ import { Candle, TimeInterval, CDSignal, BuySellPressure, MomentumSignal } from 
 import { calculateMACD, calculateLadder } from '@/lib/indicators';
 import { toFutuTime } from '@/lib/stockApi';
 
+export interface BacktestTrade {
+  time: number;
+  type: 'buy' | 'sell';
+  price: number;
+  quantity: number;
+}
+
 interface StockChartProps {
   candles: Candle[];
   interval: TimeInterval;
@@ -12,6 +19,8 @@ interface StockChartProps {
   momentumSignals?: MomentumSignal[];
   height?: number;
   costPrice?: number;
+  backtestTrades?: BacktestTrade[]; // 回测交易标记
+  showCDSignals?: boolean; // 是否显示CD信号（回测模式下可能不需要）
 }
 
 function toChartTime(ts: number, interval: TimeInterval): Time {
@@ -30,7 +39,7 @@ interface SavedRange {
   barSpan: number;
 }
 
-export default function StockChart({ candles, interval, cdSignals, buySellPressure, momentumSignals, height = 400, costPrice }: StockChartProps) {
+export default function StockChart({ candles, interval, cdSignals, buySellPressure, momentumSignals, height = 400, costPrice, backtestTrades, showCDSignals = true }: StockChartProps) {
   const mainChartRef = useRef<HTMLDivElement>(null);
   const macdChartRef = useRef<HTMLDivElement>(null);
   const pressureChartRef = useRef<HTMLDivElement>(null);
@@ -152,19 +161,30 @@ export default function StockChart({ candles, interval, cdSignals, buySellPressu
       }));
       mainSeriesRef.current.candle!.setData(candleData);
 
-      // Update CD signal markers
-      if (cdSignals.length > 0) {
-        const markers = cdSignals.map(s => ({
+      // Update markers (CD signals and/or backtest trades)
+      const markers: any[] = [];
+      
+      if (showCDSignals && cdSignals.length > 0) {
+        markers.push(...cdSignals.map(s => ({
           time: toChartTime(s.time, interval),
           position: s.type === 'buy' ? 'belowBar' as const : 'aboveBar' as const,
           color: s.type === 'buy' ? '#ef4444' : '#22c55e',
           shape: s.type === 'buy' ? 'arrowUp' as const : 'arrowDown' as const,
           text: s.label,
-        }));
-        mainSeriesRef.current.candle!.setMarkers(markers);
-      } else {
-        mainSeriesRef.current.candle!.setMarkers([]);
+        })));
       }
+      
+      if (backtestTrades && backtestTrades.length > 0) {
+        markers.push(...backtestTrades.map(t => ({
+          time: toChartTime(t.time, interval),
+          position: t.type === 'buy' ? 'belowBar' as const : 'aboveBar' as const,
+          color: t.type === 'buy' ? '#f59e0b' : '#8b5cf6',
+          shape: t.type === 'buy' ? 'circle' as const : 'circle' as const,
+          text: t.type === 'buy' ? `买${t.quantity}` : `卖${t.quantity}`,
+        })));
+      }
+      
+      mainSeriesRef.current.candle!.setMarkers(markers);
 
       // Update ladder
       const ladder = calculateLadder(candles);
@@ -252,15 +272,33 @@ export default function StockChart({ candles, interval, cdSignals, buySellPressu
       mainSeriesRef.current.yellowDn = yellowDn;
     }
 
-    // CD Signal markers
-    if (cdSignals.length > 0) {
-      candleSeries.setMarkers(cdSignals.map(s => ({
+    // Markers: CD signals or backtest trades
+    const markers: any[] = [];
+    
+    // CD Signal markers (only if showCDSignals is true)
+    if (showCDSignals && cdSignals.length > 0) {
+      markers.push(...cdSignals.map(s => ({
         time: toChartTime(s.time, interval),
         position: s.type === 'buy' ? 'belowBar' as const : 'aboveBar' as const,
         color: s.type === 'buy' ? '#ef4444' : '#22c55e',
         shape: s.type === 'buy' ? 'arrowUp' as const : 'arrowDown' as const,
         text: s.label,
       })));
+    }
+    
+    // Backtest trade markers (separate from CD signals)
+    if (backtestTrades && backtestTrades.length > 0) {
+      markers.push(...backtestTrades.map(t => ({
+        time: toChartTime(t.time, interval),
+        position: t.type === 'buy' ? 'belowBar' as const : 'aboveBar' as const,
+        color: t.type === 'buy' ? '#f59e0b' : '#8b5cf6', // 橙色买入，紫色卖出
+        shape: t.type === 'buy' ? 'circle' as const : 'circle' as const,
+        text: t.type === 'buy' ? `买${t.quantity}` : `卖${t.quantity}`,
+      })));
+    }
+    
+    if (markers.length > 0) {
+      candleSeries.setMarkers(markers);
     }
 
     // Cost price line

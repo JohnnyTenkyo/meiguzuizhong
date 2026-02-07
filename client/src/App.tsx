@@ -13,6 +13,7 @@ import StockDetail from "./pages/StockDetail";
 import Screener from "./pages/Screener";
 import Backtest from "./pages/Backtest";
 import BacktestSimulator from "./pages/BacktestSimulator";
+import TradeHistory from "./pages/TradeHistory";
 import Login from "./pages/Login";
 import { Loader2 } from "lucide-react";
 
@@ -28,9 +29,8 @@ function ProtectedRoute({ component: Component, ...rest }: { component: React.Co
   }
 
   if (!isAuthenticated) {
-    // Redirect to Manus OAuth login
-    window.location.href = "/api/oauth/login";
-    return null;
+    // Redirect to local login page
+    return <Redirect to="/login" />;
   }
 
   return <Component {...rest} />;
@@ -54,6 +54,9 @@ function Router() {
       </Route>
       <Route path="/backtest/:id">
         {() => <ProtectedRoute path="/backtest/:id" component={BacktestSimulator} />}
+      </Route>
+      <Route path="/backtest/:id/history">
+        {() => <ProtectedRoute path="/backtest/:id/history" component={TradeHistory} />}
       </Route>
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />

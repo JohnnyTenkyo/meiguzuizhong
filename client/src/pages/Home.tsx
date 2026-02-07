@@ -22,7 +22,7 @@ export default function Home() {
   const [, navigate] = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
   const isLoggedIn = isAuthenticated;
-  const username = user?.name || user?.email || 'User';
+  const username = user?.username || 'User';
   const { watchlist, isInWatchlist, toggleStock } = useWatchlist();
   const [searchQuery, setSearchQuery] = useState('');
   const [showLogin, setShowLogin] = useState(false);

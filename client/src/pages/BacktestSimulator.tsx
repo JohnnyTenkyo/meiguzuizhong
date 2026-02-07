@@ -5,8 +5,9 @@ import {
   ShoppingCart, Loader2, Search, BarChart3, Wallet, History, X, Zap, Filter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import StockChart from '@/components/StockChart';
+import StockChart, { BacktestTrade } from '@/components/StockChart';
 import SignalPanel from '@/components/SignalPanel';
+import BacktestStats from '@/components/BacktestStats';
 import { fetchStockData, US_STOCKS } from '@/lib/stockApi';
 import { Candle, TimeInterval, CDSignal, BuySellPressure, NXSignal, MomentumSignal } from '@/lib/types';
 import { calculateCDSignals, calculateBuySellPressure, calculateNXSignals, calculateMomentum } from '@/lib/indicators';
@@ -313,6 +314,14 @@ export default function BacktestSimulator() {
             </span>
           </div>
           <div className="flex items-center gap-3 text-xs">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/backtest/${sessionId}/history`)}
+            >
+              <History size={14} />
+              交易历史
+            </Button>
             <div className="flex items-center gap-1">
               <Wallet size={12} className="text-muted-foreground" />
               <span className="font-medium">${Number(session.currentBalance).toLocaleString()}</span>
@@ -420,7 +429,27 @@ export default function BacktestSimulator() {
                 momentumSignals={momentumSignals}
                 height={350}
                 costPrice={costPrice}
+                backtestTrades={trades
+                  .filter(t => t.symbol === currentSymbol)
+                  .map(t => ({
+                    time: t.tradeDate,
+                    type: t.type,
+                    price: parseFloat(t.price),
+                    quantity: t.quantity,
+                  } as BacktestTrade))}
+                showCDSignals={false}
               />
+
+              {/* Backtest Performance Stats */}
+              <div className="pt-3">
+                <h3 className="text-sm font-medium mb-2 text-muted-foreground">回测绩效</h3>
+                <BacktestStats
+                  trades={trades.filter(t => t.symbol === currentSymbol)}
+                  initialBalance={Number(session.initialBalance)}
+                  currentBalance={Number(session.currentBalance)}
+                  totalAssets={totalAssets}
+                />
+              </div>
 
               {/* Signal Panel - full indicator analysis */}
               <div className="pt-3">
