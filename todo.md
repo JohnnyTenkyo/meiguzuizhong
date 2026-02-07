@@ -102,3 +102,11 @@
 - [x] 修改 context.ts 从 header 中读取 token
 - [x] 修复 Login.tsx 导航逻辑（使用 refetch + setTimeout）
 - [x] 测试登录和认证流程（注册、登录、页面跳转、所有功能页面访问）
+
+## 回测系统修复（用户报告无法创建存档和进入）
+- [x] 检查回测系统的创建存档功能
+- [x] 检查数据库表和路由配置
+- [x] 迁移 backtestRouter.ts 并修改为使用 users 表
+- [x] 在 index.ts 中注册 /api/backtest 路由
+- [x] 修复创建存档的问题
+- [x] 测试完整的回测流程（创建存档、进入回测、交易操作、交易记录）
