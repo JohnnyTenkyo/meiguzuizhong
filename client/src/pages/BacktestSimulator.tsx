@@ -83,6 +83,12 @@ export default function BacktestSimulator() {
   const sessionId = params?.id ? parseInt(params.id) : 0;
 
   const [session, setSession] = useState<BacktestSession | null>(null);
+  const sessionRef = useRef<BacktestSession | null>(null);
+  
+  // Update ref when session changes
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,14 +136,14 @@ export default function BacktestSimulator() {
 
   // Fetch chart data for current symbol and interval
   const fetchChartData = useCallback(async () => {
-    if (!session) return;
+    if (!sessionRef.current) return;
     setChartLoading(true);
     try {
       const candles = await fetchStockData(currentSymbol, interval);
       setAllCandles(candles);
 
       // Find the index that corresponds to the session's current date
-      const cutoffTimestamp = dateNumToTimestamp(session.currentDate);
+      const cutoffTimestamp = dateNumToTimestamp(sessionRef.current.currentDate);
       let idx = candles.length;
       for (let i = 0; i < candles.length; i++) {
         if (candles[i].time > cutoffTimestamp) {
@@ -150,11 +156,12 @@ export default function BacktestSimulator() {
       console.error('Failed to fetch chart data:', err);
     }
     setChartLoading(false);
-  }, [currentSymbol, interval, session]);
+  }, [currentSymbol, interval]);
 
+  // Fetch chart data on initial load and when symbol or interval changes
   useEffect(() => {
     if (session) fetchChartData();
-  }, [fetchChartData, session]);
+  }, [session, currentSymbol, interval, fetchChartData]); // Include session for initial load
 
   // Get visible candles (only up to current simulation point)
   const visibleCandles = useMemo(() => allCandles.slice(0, visibleIndex), [allCandles, visibleIndex]);

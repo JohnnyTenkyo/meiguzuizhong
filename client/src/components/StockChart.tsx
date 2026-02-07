@@ -125,10 +125,8 @@ export default function StockChart({ candles, interval, cdSignals, buySellPressu
   const restoreVisibleRange = useCallback((newTotal: number) => {
     if (!mainChartApi.current || !savedRangeRef.current) return;
     const { barsFromEnd, barSpan } = savedRangeRef.current;
-    // Adjust: the new last bar index is newTotal - 1
-    // Keep the same number of bars from the end, but shift by 1 to show the new bar
-    const adjustedBarsFromEnd = Math.max(0, barsFromEnd - 1); // Shift to include new bar
-    const newTo = newTotal - 1 - adjustedBarsFromEnd;
+    // Keep the exact same position and zoom level - do NOT auto-scroll
+    const newTo = newTotal - 1 - barsFromEnd;
     const newFrom = newTo - barSpan;
     try {
       mainChartApi.current.timeScale().setVisibleLogicalRange({
