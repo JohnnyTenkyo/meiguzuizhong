@@ -34,7 +34,15 @@ export const localAuthRouter = router({
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
-      return { success: true };
+      // Return user info
+      return {
+        success: true,
+        user: {
+          id: result.userId,
+          openId: `local:${input.username}`,
+          role: 'user' as const,
+        },
+      };
     }),
 
   login: publicProcedure
