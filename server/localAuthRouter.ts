@@ -27,16 +27,10 @@ export const localAuthRouter = router({
         .setExpirationTime("7d")
         .sign(JWT_SECRET);
 
-      // Set cookie
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, token, {
-        ...cookieOptions,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-
-      // Return user info
+      // Return token and user info
       return {
         success: true,
+        token,
         user: {
           id: result.userId,
           openId: `local:${input.username}`,
@@ -63,14 +57,8 @@ export const localAuthRouter = router({
         .setExpirationTime("7d")
         .sign(JWT_SECRET);
 
-      // Set cookie
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, token, {
-        ...cookieOptions,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-
-      return { success: true, user: result.user };
+      // Return token and user info
+      return { success: true, token, user: result.user };
     }),
 
   changePassword: publicProcedure

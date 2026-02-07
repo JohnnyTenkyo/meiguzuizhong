@@ -81,3 +81,24 @@
 - [x] 检查登录流程的认证逻辑
 - [x] 修复注册后自动登录功能
 - [x] 测试注册和登录流程
+
+## 登录刷新问题（用户再次报告）
+- [x] 检查浏览器控制台错误
+- [x] 检查网络请求和响应
+- [x] 分析页面刷新后的认证流程
+- [x] 修复登录后刷新导致的问题
+- [ ] 测试完整的登录流程
+
+## 移除 Manus OAuth 认证系统（用户要求）
+- [x] 修改 context.ts 移除 Manus OAuth 认证逻辑
+- [x] 简化认证系统只使用本地 JWT token
+- [ ] 测试登录和注册功能
+- [ ] 验证所有页面的认证保护
+
+## 改用 localStorage 存储 JWT token（用户同意）
+- [x] 修改 localAuthRouter 返回 token 而不是设置 cookie
+- [x] 修改前端 Login.tsx 将 token 存储到 localStorage
+- [x] 修改 tRPC client 配置，在每个请求 header 中发送 token
+- [x] 修改 context.ts 从 header 中读取 token
+- [x] 修复 Login.tsx 导航逻辑（使用 refetch + setTimeout）
+- [x] 测试登录和认证流程（注册、登录、页面跳转、所有功能页面访问）

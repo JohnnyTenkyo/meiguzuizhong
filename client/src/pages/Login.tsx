@@ -15,10 +15,18 @@ export default function Login() {
   const [registerPassword, setRegisterPassword] = useState('');
   const [error, setError] = useState('');
 
+  const utils = trpc.useUtils();
+
   const loginMutation = trpc.localAuth.login.useMutation({
-    onSuccess: () => {
-      navigate('/');
-      window.location.reload(); // Reload to update auth state
+    onSuccess: async (data) => {
+      if (data.success && data.token) {
+        // Store token in localStorage
+        localStorage.setItem('auth_token', data.token);
+        // Wait for auth query to complete before navigating
+        await utils.auth.me.refetch();
+        // Small delay to ensure state updates
+        setTimeout(() => navigate('/'), 100);
+      }
     },
     onError: (err) => {
       setError(err.message || '登录失败');
@@ -26,9 +34,15 @@ export default function Login() {
   });
 
   const registerMutation = trpc.localAuth.register.useMutation({
-    onSuccess: () => {
-      navigate('/');
-      window.location.reload(); // Reload to update auth state
+    onSuccess: async (data) => {
+      if (data.success && data.token) {
+        // Store token in localStorage
+        localStorage.setItem('auth_token', data.token);
+        // Wait for auth query to complete before navigating
+        await utils.auth.me.refetch();
+        // Small delay to ensure state updates
+        setTimeout(() => navigate('/'), 100);
+      }
     },
     onError: (err) => {
       setError(err.message || '注册失败');
