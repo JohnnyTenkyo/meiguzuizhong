@@ -2,6 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "./_core/trpc";
 import https from "https";
 import http from "http";
+import { getTwitterTweetsByUsername } from "./twitterAdapter";
 
 // ============================================================
 // VIP 人物数据库 - 内置重要人物信息
@@ -208,7 +209,7 @@ VIP_PEOPLE.forEach((p) => {
 
 // 额外补充一些常见股票的关键人物
 const EXTRA_TICKER_MAP: Record<string, { name: string; nameZh: string; title: string; titleZh: string; twitterHandle?: string; avatarEmoji: string }[]> = {
-  "OPEN": [{ name: "Kaz Nejatian", nameZh: "卡兹·内贾蒂安", title: "CEO of Opendoor Technologies", titleZh: "Opendoor Technologies CEO", avatarEmoji: "🏠" }],
+  "OPEN": [{ name: "Kaz Nejatian", nameZh: "卡兹·内贾蒂安", title: "CEO of Opendoor Technologies", titleZh: "Opendoor Technologies CEO", twitterHandle: "nejatian", avatarEmoji: "🏠" }],
   "PLTR": [{ name: "Alex Karp", nameZh: "亚历克斯·卡普", title: "CEO of Palantir Technologies", titleZh: "Palantir Technologies CEO", avatarEmoji: "🔮" }],
   "CRM": [{ name: "Marc Benioff", nameZh: "马克·贝尼奥夫", title: "CEO of Salesforce", titleZh: "Salesforce CEO", twitterHandle: "Benioff", avatarEmoji: "☁️" }],
   "NFLX": [{ name: "Ted Sarandos", nameZh: "泰德·萨兰多斯", title: "Co-CEO of Netflix", titleZh: "Netflix 联合CEO", avatarEmoji: "🎬" }],
@@ -377,7 +378,45 @@ export const newsflowRouter = router({
       }
     }),
 
-  // 获取人物社交媒体动态（通过 Google News 搜索间接获取）
+  // 获取人物 Twitter 动态（直接通过 Twitter API）
+  getPersonTwitter: publicProcedure
+    .input(z.object({
+      twitterHandle: z.string(),
+      limit: z.number().optional().default(20),
+    }))
+    .query(async ({ input }) => {
+      try {
+        if (!input.twitterHandle) {
+          return [];
+        }
+
+        // 直接从 Twitter API 获取推文
+        const tweets = await getTwitterTweetsByUsername(input.twitterHandle, input.limit);
+        
+        // 转换为统一的 NewsItem 格式
+        const items = tweets.map((tweet) => ({
+          title: tweet.text,
+          titleZh: tweet.text, // Twitter 推文暂不翻译，保持原文
+          link: `https://x.com/${input.twitterHandle}/status/${tweet.id}`,
+          pubDate: tweet.created_at,
+          source: "X (Twitter)",
+          type: "social" as const,
+          engagement: {
+            likes: tweet.favorite_count,
+            retweets: tweet.retweet_count,
+            replies: tweet.reply_count,
+            quotes: tweet.quote_count,
+          },
+        }));
+
+        return items;
+      } catch (err) {
+        console.error("Error fetching Twitter timeline:", err);
+        return [];
+      }
+    }),
+
+  // 获取人物社交媒体动态（通过 Google News 搜索间接获取，作为备用）
   getPersonSocial: publicProcedure
     .input(z.object({
       personName: z.string(),
@@ -386,11 +425,13 @@ export const newsflowRouter = router({
     }))
     .query(async ({ input }) => {
       try {
-        // 搜索该人物在社交媒体上的动态
+        // 搜索该人物在社交媒体上的动态，使用多个查询词增加覆盖范围
         const queries = [
           `${input.personName} says statement`,
-          `${input.personName} tweet post`,
-        ];
+          `${input.personName} tweet post X`,
+          input.twitterHandle ? `@${input.twitterHandle} twitter` : null,
+          `${input.personName} announced posted`,
+        ].filter(Boolean) as string[];
 
         const allItems: NewsItem[] = [];
         for (const q of queries) {
@@ -444,16 +485,46 @@ export const newsflowRouter = router({
         let newsItems = parseGoogleNewsRSS(newsXml);
 
         // 获取社交媒体相关
-        const socialUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(input.personName + " says OR statement OR announced OR posted")}&hl=en-US&gl=US&ceid=US:en`;
         let socialItems: NewsItem[] = [];
-        try {
-          const socialXml = await fetchUrl(socialUrl);
-          socialItems = parseGoogleNewsRSS(socialXml).map((item) => ({
-            ...item,
-            type: "social" as const,
-          }));
-        } catch {
-          // skip
+        
+        // 优先使用 Twitter API 获取实时推文
+        if (input.twitterHandle) {
+          try {
+            const tweets = await getTwitterTweetsByUsername(input.twitterHandle, 10);
+            const twitterItems = tweets.map((tweet) => ({
+              title: tweet.text,
+              titleZh: tweet.text,
+              link: `https://x.com/${input.twitterHandle}/status/${tweet.id}`,
+              pubDate: tweet.created_at,
+              source: "X (Twitter)",
+              type: "social" as const,
+            }));
+            socialItems.push(...twitterItems);
+          } catch (err) {
+            console.error("Error fetching Twitter timeline:", err);
+          }
+        }
+        
+        // 如果 Twitter API 获取失败或没有 twitterHandle，使用 Google News 作为后备
+        if (socialItems.length === 0) {
+          const socialQueries = [
+            `${input.personName} says OR statement OR announced OR posted`,
+            input.twitterHandle ? `@${input.twitterHandle} OR "${input.personName}" X post` : null,
+          ].filter(Boolean) as string[];
+          
+          for (const query of socialQueries) {
+            try {
+              const socialUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+              const socialXml = await fetchUrl(socialUrl);
+              const items = parseGoogleNewsRSS(socialXml).map((item) => ({
+                ...item,
+                type: "social" as const,
+              }));
+              socialItems.push(...items);
+            } catch {
+              // skip
+            }
+          }
         }
 
         // 合并并去重

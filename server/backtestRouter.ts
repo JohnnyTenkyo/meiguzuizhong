@@ -49,29 +49,28 @@ backtestApiRouter.get("/sessions", async (req: any, res) => {
           session.currentDate % 100
         ).getTime();
         
-        await Promise.all(
-          activePositions.map(async (pos) => {
-            try {
-              // 获取历史K线数据，找到当前模拟日期的价格
-              const candles = await fetchFinnhubCandles(pos.symbol, '1d');
-              let priceAtDate = Number(pos.avgCost); // 默认使用成本价
-              
-              // 找到当前模拟日期或之前最近的K线
-              for (let i = candles.length - 1; i >= 0; i--) {
-                if (candles[i].time <= cutoffTimestamp) {
-                  priceAtDate = candles[i].close;
-                  break;
-                }
+        // 串行获取价格以避免 API 限流
+        for (const pos of activePositions) {
+          try {
+            // 获取历史K线数据，找到当前模拟日期的价格
+            const candles = await fetchFinnhubCandles(pos.symbol, '1d');
+            let priceAtDate = Number(pos.avgCost); // 默认使用成本价
+            
+            // 找到当前模拟日期或之前最近的K线
+            for (let i = candles.length - 1; i >= 0; i--) {
+              if (candles[i].time <= cutoffTimestamp) {
+                priceAtDate = candles[i].close;
+                break;
               }
-              
-              totalMarketValue += priceAtDate * Number(pos.quantity);
-            } catch (err) {
-              console.error(`Failed to fetch historical price for ${pos.symbol}:`, err);
-              // 如果获取失败，使用成本价作为后备
-              totalMarketValue += Number(pos.totalCost);
             }
-          })
-        );
+            
+            totalMarketValue += priceAtDate * Number(pos.quantity);
+          } catch (err) {
+            console.error(`Failed to fetch historical price for ${pos.symbol}:`, err);
+            // 如果获取失败，使用成本价作为后备
+            totalMarketValue += Number(pos.avgCost) * Number(pos.quantity);
+          }
+        }
         
         return {
           ...session,
