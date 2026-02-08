@@ -106,3 +106,10 @@
   - Added shadow and transition effects
 - [x] Ensure CD toggle button is positioned correctly and visible in UI
 - [x] Test CD toggle functionality after fix
+
+
+## 回测系统和 CD 指标修复（用户报告）
+- [x] 修复回测系统创建存档无反应问题（重建数据库表添加 localUserId 列）
+- [x] 优化 CD 指标抵底筛选逻辑 - 限制为距离最新K线往前5根K线内出现的抵底信号
+- [x] 测试回测系统创建存档和进入（成功创建并进入回测模拟器）
+- [x] 测试 CD 指标筛选结果的准确性（筛选完成，找到24只符合条件的股票）
