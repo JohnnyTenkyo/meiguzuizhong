@@ -107,3 +107,24 @@ export const backtestPositions = mysqlTable("backtest_positions", {
 
 export type BacktestPosition = typeof backtestPositions.$inferSelect;
 export type InsertBacktestPosition = typeof backtestPositions.$inferInsert;
+
+/**
+ * Custom tracked people - users can add their own people to track
+ */
+export const trackedPeople = mysqlTable("tracked_people", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 128 }).notNull(),
+  nameZh: varchar("nameZh", { length: 128 }),
+  title: varchar("title", { length: 256 }),
+  titleZh: varchar("titleZh", { length: 256 }),
+  twitterHandle: varchar("twitterHandle", { length: 64 }),
+  truthSocialHandle: varchar("truthSocialHandle", { length: 64 }),
+  category: mysqlEnum("category", ["政治", "科技", "金融", "商业", "其他"]).default("其他").notNull(),
+  avatarEmoji: varchar("avatarEmoji", { length: 10 }).default("👤"),
+  addedAt: timestamp("addedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TrackedPerson = typeof trackedPeople.$inferSelect;
+export type InsertTrackedPerson = typeof trackedPeople.$inferInsert;

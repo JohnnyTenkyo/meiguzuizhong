@@ -69,10 +69,22 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
   const [newsFeed, setNewsFeed] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingVip, setLoadingVip] = useState(true);
-  const [activeTab, setActiveTab] = useState<"vip" | "watchlist">("vip");
+  const [activeTab, setActiveTab] = useState<"vip" | "watchlist" | "custom">("vip");
   const [watchlistPeople, setWatchlistPeople] = useState<any[]>([]);
+  const [customPeople, setCustomPeople] = useState<VIPPerson[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("全部");
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [newPerson, setNewPerson] = useState({
+    name: "",
+    nameZh: "",
+    title: "",
+    titleZh: "",
+    twitterHandle: "",
+    truthSocialHandle: "",
+    category: "其他" as "政治" | "科技" | "金融" | "商业" | "其他",
+    avatarEmoji: "👤",
+  });
 
   // 获取 VIP 列表
   useEffect(() => {
@@ -102,6 +114,31 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
       })
       .catch(console.error);
   }, [watchlistTickers]);
+
+  // 获取自定义追踪人物
+  useEffect(() => {
+    fetch("/api/trpc/newsflow.getTrackedPeople")
+      .then((r) => r.json())
+      .then((data) => {
+        const list = data?.result?.data?.json || data?.result?.data || [];
+        const formattedList = Array.isArray(list) ? list.map((p: any) => ({
+          id: `custom_${p.id}`,
+          name: p.name,
+          nameZh: p.nameZh || p.name,
+          title: p.title || "",
+          titleZh: p.titleZh || p.title || "",
+          org: "",
+          category: p.category,
+          avatarEmoji: p.avatarEmoji || "👤",
+          twitterHandle: p.twitterHandle,
+          truthSocialHandle: p.truthSocialHandle,
+          relatedTickers: [],
+          dbId: p.id, // 保存数据库 ID 用于删除
+        })) : [];
+        setCustomPeople(formattedList);
+      })
+      .catch(console.error);
+  }, []);
 
   // 获取选中人物的内容
   const fetchPersonContent = useCallback(async (person: VIPPerson) => {
@@ -284,6 +321,21 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
             }}
           >
             ⭐ 自选关联 {watchlistPeople.length > 0 && `(${watchlistPeople.length})`}
+          </button>
+          <button
+            onClick={() => setActiveTab("custom")}
+            style={{
+              padding: "5px 14px",
+              borderRadius: 6,
+              border: "none",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+              background: activeTab === "custom" ? "#3b82f6" : "transparent",
+              color: activeTab === "custom" ? "#fff" : "#94a3b8",
+            }}
+          >
+            ➕ 自定义追踪 {customPeople.length > 0 && `(${customPeople.length})`}
           </button>
         </div>
       </div>

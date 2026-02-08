@@ -1,9 +1,12 @@
 import { z } from "zod";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import https from "https";
 import http from "http";
 import { getTwitterTweetsByUsername } from "./twitterAdapter";
 import { getTruthSocialPosts, isTruthSocialConfigured } from "./truthSocialAdapter";
+import { db } from "./_core/db";
+import { trackedPeople } from "../drizzle/schema";
+import { eq, and } from "drizzle-orm";
 
 // ============================================================
 // VIP 人物数据库 - 内置重要人物信息
@@ -790,5 +793,87 @@ export const newsflowRouter = router({
 
       const people = Array.from(personSet.values());
       return people;
+    }),
+
+  // ============================================================
+  // 自定义追踪人物 API
+  // ============================================================
+
+  // 获取用户的自定义追踪人物列表
+  getTrackedPeople: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.user.id;
+    const people = await db.select().from(trackedPeople).where(eq(trackedPeople.userId, userId));
+    return people;
+  }),
+
+  // 添加自定义追踪人物
+  addTrackedPerson: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1),
+      nameZh: z.string().optional(),
+      title: z.string().optional(),
+      titleZh: z.string().optional(),
+      twitterHandle: z.string().optional(),
+      truthSocialHandle: z.string().optional(),
+      category: z.enum(["政治", "科技", "金融", "商业", "其他"]).default("其他"),
+      avatarEmoji: z.string().default("👤"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const [person] = await db.insert(trackedPeople).values({
+        userId,
+        name: input.name,
+        nameZh: input.nameZh || input.name,
+        title: input.title || "",
+        titleZh: input.titleZh || input.title || "",
+        twitterHandle: input.twitterHandle,
+        truthSocialHandle: input.truthSocialHandle,
+        category: input.category,
+        avatarEmoji: input.avatarEmoji,
+      });
+      return { success: true, id: person.insertId };
+    }),
+
+  // 删除自定义追踪人物
+  deleteTrackedPerson: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      await db.delete(trackedPeople).where(
+        and(
+          eq(trackedPeople.id, input.id),
+          eq(trackedPeople.userId, userId)
+        )
+      );
+      return { success: true };
+    }),
+
+  // 更新自定义追踪人物
+  updateTrackedPerson: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      nameZh: z.string().optional(),
+      title: z.string().optional(),
+      titleZh: z.string().optional(),
+      twitterHandle: z.string().optional(),
+      truthSocialHandle: z.string().optional(),
+      category: z.enum(["政治", "科技", "金融", "商业", "其他"]).optional(),
+      avatarEmoji: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const { id, ...updates } = input;
+      await db.update(trackedPeople)
+        .set(updates)
+        .where(
+          and(
+            eq(trackedPeople.id, id),
+            eq(trackedPeople.userId, userId)
+          )
+        );
+      return { success: true };
     }),
 });
