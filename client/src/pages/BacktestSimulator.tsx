@@ -495,7 +495,7 @@ export default function BacktestSimulator() {
           <div className="flex items-center gap-3 text-xs">
             <div className="flex items-center gap-1">
               <Wallet size={12} className="text-muted-foreground" />
-              <span className="font-medium">${Number(session.currentBalance).toLocaleString()}</span>
+              <span className="font-medium">${totalAssets.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className={`font-bold ${totalReturn >= 0 ? 'text-red-500' : 'text-green-500'}`}>
               {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%
