@@ -4,7 +4,7 @@ import https from "https";
 import http from "http";
 import { getTwitterTweetsByUsername } from "./twitterAdapter";
 import { getTruthSocialPosts, isTruthSocialConfigured } from "./truthSocialAdapter";
-import { db } from "./_core/db";
+import { getDb } from "./db";
 import { trackedPeople } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -802,6 +802,8 @@ export const newsflowRouter = router({
   // 获取用户的自定义追踪人物列表
   getTrackedPeople: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.user.id;
+    const db = await getDb();
+    if (!db) return [];
     const people = await db.select().from(trackedPeople).where(eq(trackedPeople.userId, userId));
     return people;
   }),
@@ -820,6 +822,8 @@ export const newsflowRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
       const [person] = await db.insert(trackedPeople).values({
         userId,
         name: input.name,
@@ -841,6 +845,8 @@ export const newsflowRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
       await db.delete(trackedPeople).where(
         and(
           eq(trackedPeople.id, input.id),
@@ -866,6 +872,8 @@ export const newsflowRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
       const { id, ...updates } = input;
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
       await db.update(trackedPeople)
         .set(updates)
         .where(
