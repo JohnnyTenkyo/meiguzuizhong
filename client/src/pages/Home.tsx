@@ -254,11 +254,35 @@ export default function Home() {
           )}
         </div>
 
-        {/* FOCI 智能助手 - 市场情绪面板 */}
-        <FociDashboard />
+        {/* Screener entry - 置顶 */}
+        <div
+          onClick={() => navigate('/screener')}
+          className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-primary/10 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Zap size={18} className="text-primary" />
+            <div>
+              <div className="text-sm font-medium">条件选股</div>
+              <div className="text-xs text-muted-foreground">买卖力道 · CD抄底 · 蓝色梯子 · 智能筛选</div>
+            </div>
+          </div>
+          <span className="text-xs text-primary">开始筛选 →</span>
+        </div>
 
-        {/* FOCI 博主持仓追踪 */}
-        <FociBloggerTracker />
+        {/* Backtest entry - 置顶 */}
+        <div
+          onClick={() => navigate('/backtest')}
+          className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-amber-500/10 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Clock size={18} className="text-amber-500" />
+            <div>
+              <div className="text-sm font-medium">回测系统</div>
+              <div className="text-xs text-muted-foreground">虚拟账户 · 历史模拟 · K线回放 · 指标验证</div>
+            </div>
+          </div>
+          <span className="text-xs text-amber-500">开始回测 →</span>
+        </div>
 
         {/* Market Overview - Three major indices + BTC + Gold */}
         <section>
@@ -418,35 +442,11 @@ export default function Home() {
           )}
         </section>
 
-        {/* Screener entry */}
-        <div
-          onClick={() => navigate('/screener')}
-          className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-primary/10 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Zap size={18} className="text-primary" />
-            <div>
-              <div className="text-sm font-medium">条件选股</div>
-              <div className="text-xs text-muted-foreground">买卖力道 · CD抄底 · 蓝色梯子 · 智能筛选</div>
-            </div>
-          </div>
-          <span className="text-xs text-primary">开始筛选 →</span>
-        </div>
+        {/* FOCI 智能助手 - 市场情绪面板 - 置底 */}
+        <FociDashboard />
 
-        {/* Backtest entry */}
-        <div
-          onClick={() => navigate('/backtest')}
-          className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-amber-500/10 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Clock size={18} className="text-amber-500" />
-            <div>
-              <div className="text-sm font-medium">回测系统</div>
-              <div className="text-xs text-muted-foreground">虚拟账户 · 历史模拟 · K线回放 · 指标验证</div>
-            </div>
-          </div>
-          <span className="text-xs text-amber-500">开始回测 →</span>
-        </div>
+        {/* FOCI 博主持仓追踪 - 置底 */}
+        <FociBloggerTracker />
       </main>
 
       <LoginDialog open={showLogin} onClose={() => setShowLogin(false)} />
