@@ -32,7 +32,22 @@ backtestApiRouter.get("/sessions", async (req: any, res) => {
       .where(eq(backtestSessions.localUserId, req.userId))
       .orderBy(desc(backtestSessions.updatedAt));
     
-    return res.json({ success: true, sessions });
+    // 为每个 session 附带持仓总成本，用于计算真实盈亏
+    const sessionsWithPositions = await Promise.all(
+      sessions.map(async (session) => {
+        const positions = await db.select().from(backtestPositions)
+          .where(eq(backtestPositions.sessionId, session.id));
+        const activePositions = positions.filter(p => Number(p.quantity) > 0);
+        const totalPositionCost = activePositions.reduce((sum, p) => sum + Number(p.totalCost), 0);
+        return {
+          ...session,
+          totalPositionCost: totalPositionCost.toFixed(2),
+          positionCount: activePositions.length,
+        };
+      })
+    );
+    
+    return res.json({ success: true, sessions: sessionsWithPositions });
   } catch (err) {
     console.error("List sessions error:", err);
     return res.json({ success: false, error: "获取存档失败" });

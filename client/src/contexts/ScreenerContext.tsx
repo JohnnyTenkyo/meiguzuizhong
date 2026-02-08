@@ -80,18 +80,18 @@ function checkStockConditions(
     try {
       if (cond.indicator === 'cd_buy') {
         const signals = calculateCDSignals(candles);
-        // 只筛选最近5根K线内出现的抵底信号
+        // 只筛选最近10根K线内出现的抵底信号
         const recentBuySignals = signals.filter(s => 
           s.type === 'buy' && 
-          s.time >= candles[Math.max(0, candles.length - 5)].time
+          s.time >= candles[Math.max(0, candles.length - 10)].time
         );
         conditionMet = recentBuySignals.length > 0;
       } else if (cond.indicator === 'cd_sell') {
         const signals = calculateCDSignals(candles);
-        // 只筛选最近5根K线内出现的顶部信号
+        // 只筛选最近10根K线内出现的顶部信号
         const recentSellSignals = signals.filter(s => 
           s.type === 'sell' && 
-          s.time >= candles[Math.max(0, candles.length - 5)].time
+          s.time >= candles[Math.max(0, candles.length - 10)].time
         );
         conditionMet = recentSellSignals.length > 0;
       } else if (cond.indicator === 'pressure_strong_up') {

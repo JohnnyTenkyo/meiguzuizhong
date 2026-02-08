@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
-import { ArrowLeft, Plus, Play, Trash2, Clock, DollarSign, Calendar, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Play, Trash2, Clock, DollarSign, Calendar, Loader2, TrendingUp, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface BacktestSession {
@@ -14,6 +14,8 @@ interface BacktestSession {
   status: string;
   createdAt: string;
   updatedAt: string;
+  totalPositionCost?: string;  // 持仓总成本（后端新增字段）
+  positionCount?: number;       // 持仓股票数量（后端新增字段）
 }
 
 function getAuthHeaders() {
@@ -200,8 +202,12 @@ export default function Backtest() {
               我的存档 ({sessions.length})
             </h2>
             {sessions.map(session => {
-              const pnl = Number(session.currentBalance) - Number(session.initialBalance);
-              const pnlPercent = (pnl / Number(session.initialBalance)) * 100;
+              // 总资产 = 当前现金余额 + 持仓股票价值（成本）
+              const positionValue = Number(session.totalPositionCost || 0);
+              const totalAssets = Number(session.currentBalance) + positionValue;
+              const totalPnl = totalAssets - Number(session.initialBalance);
+              const totalPnlPercent = (totalPnl / Number(session.initialBalance)) * 100;
+              const posCount = session.positionCount || 0;
               
               return (
                 <div
@@ -224,19 +230,19 @@ export default function Backtest() {
                     </button>
                   </div>
                   
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
                     <div className="flex items-center gap-2">
                       <DollarSign size={14} className="text-muted-foreground" />
                       <div>
-                        <div className="text-xs text-muted-foreground">当前资金</div>
+                        <div className="text-xs text-muted-foreground">可用资金</div>
                         <div className="text-sm font-medium">${Number(session.currentBalance).toLocaleString()}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <DollarSign size={14} className="text-muted-foreground" />
+                      <Briefcase size={14} className="text-muted-foreground" />
                       <div>
-                        <div className="text-xs text-muted-foreground">初始资金</div>
-                        <div className="text-sm font-medium">${Number(session.initialBalance).toLocaleString()}</div>
+                        <div className="text-xs text-muted-foreground">持仓价值{posCount > 0 ? ` (${posCount}只)` : ''}</div>
+                        <div className="text-sm font-medium">${positionValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -246,10 +252,24 @@ export default function Backtest() {
                         <div className="text-sm font-medium">{formatDate(session.currentDate)}</div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* 总资产和盈亏 */}
+                  <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp size={14} className="text-muted-foreground" />
+                      <div>
+                        <span className="text-xs text-muted-foreground">总资产: </span>
+                        <span className="text-sm font-bold">${totalAssets.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                        <span className="text-xs text-muted-foreground ml-2">(初始: ${Number(session.initialBalance).toLocaleString()})</span>
+                      </div>
+                    </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">盈亏</div>
-                      <div className={`text-sm font-bold ${pnl >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-                        {pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
+                      <div className={`text-sm font-bold ${totalPnl >= 0 ? 'text-red-500' : 'text-green-500'}`}>
+                        {totalPnl >= 0 ? '+' : ''}{totalPnlPercent.toFixed(2)}%
+                        <span className="text-xs ml-1">
+                          ({totalPnl >= 0 ? '+' : ''}${totalPnl.toLocaleString(undefined, { maximumFractionDigits: 0 })})
+                        </span>
                       </div>
                     </div>
                   </div>
