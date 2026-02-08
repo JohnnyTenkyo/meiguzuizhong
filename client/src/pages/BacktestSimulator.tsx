@@ -90,6 +90,7 @@ export default function BacktestSimulator() {
 
   const [session, setSession] = useState<BacktestSession | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [positionPrices, setPositionPrices] = useState<Record<string, number>>({});
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -100,6 +101,42 @@ export default function BacktestSimulator() {
 
   // Chart data
   const [interval, setInterval] = useState<TimeInterval>('1d');
+
+  // Fetch latest prices for all positions
+  const fetchPositionPrices = useCallback(async () => {
+    if (positions.length === 0 || !session) return;
+    
+    const priceMap: Record<string, number> = {};
+    const cutoffTimestamp = dateNumToTimestamp(session.currentDate);
+    
+    // Fetch prices for all positions in parallel
+    await Promise.all(
+      positions.map(async (pos) => {
+        try {
+          const candles = await fetchStockData(pos.symbol, interval);
+          // Find the last candle before or at current date
+          let lastPrice = Number(pos.avgCost); // fallback to cost
+          for (let i = candles.length - 1; i >= 0; i--) {
+            if (candles[i].time <= cutoffTimestamp) {
+              lastPrice = candles[i].close;
+              break;
+            }
+          }
+          priceMap[pos.symbol] = lastPrice;
+        } catch (err) {
+          console.error(`Failed to fetch price for ${pos.symbol}:`, err);
+          priceMap[pos.symbol] = Number(pos.avgCost); // fallback
+        }
+      })
+    );
+    
+    setPositionPrices(priceMap);
+  }, [positions, session, interval]);
+
+  // Fetch position prices when positions or session date changes
+  useEffect(() => {
+    fetchPositionPrices();
+  }, [fetchPositionPrices]);
   const [allCandles, setAllCandles] = useState<Candle[]>([]);
   const [visibleIndex, setVisibleIndex] = useState(0);
   const [chartLoading, setChartLoading] = useState(false);
@@ -464,16 +501,18 @@ export default function BacktestSimulator() {
     );
   }
 
-  const totalPnl = Number(session.currentBalance) - Number(session.initialBalance);
-  let unrealizedPnl = 0;
+  // Calculate total market value using real-time prices for all positions
   let totalMarketValue = 0;
+  let unrealizedPnl = 0;
   for (const pos of positions) {
-    if (currentCandle && pos.symbol === currentSymbol) {
-      unrealizedPnl += (currentCandle.close - Number(pos.avgCost)) * pos.quantity;
-      totalMarketValue += currentCandle.close * pos.quantity;
-    } else {
-      totalMarketValue += Number(pos.totalCost);
-    }
+    // Use current candle price for the symbol being viewed, otherwise use fetched price
+    const currentPrice = (pos.symbol === currentSymbol && currentCandle) 
+      ? currentCandle.close 
+      : (positionPrices[pos.symbol] || Number(pos.avgCost));
+    
+    const marketValue = currentPrice * pos.quantity;
+    totalMarketValue += marketValue;
+    unrealizedPnl += (currentPrice - Number(pos.avgCost)) * pos.quantity;
   }
   const totalAssets = Number(session.currentBalance) + totalMarketValue;
   const totalReturn = ((totalAssets - Number(session.initialBalance)) / Number(session.initialBalance)) * 100;
@@ -736,10 +775,13 @@ export default function BacktestSimulator() {
               ) : (
                 <div className="divide-y divide-border">
                   {positions.map(pos => {
-                    const currentPrice = pos.symbol === currentSymbol && currentCandle ? currentCandle.close : 0;
-                    const marketValue = currentPrice > 0 ? currentPrice * pos.quantity : Number(pos.totalCost);
-                    const pnl = currentPrice > 0 ? (currentPrice - Number(pos.avgCost)) * pos.quantity : 0;
-                    const pnlPercent = currentPrice > 0 ? ((currentPrice - Number(pos.avgCost)) / Number(pos.avgCost)) * 100 : 0;
+                    // Use current candle price for viewed symbol, otherwise use fetched price
+                    const currentPrice = (pos.symbol === currentSymbol && currentCandle) 
+                      ? currentCandle.close 
+                      : (positionPrices[pos.symbol] || Number(pos.avgCost));
+                    const marketValue = currentPrice * pos.quantity;
+                    const pnl = (currentPrice - Number(pos.avgCost)) * pos.quantity;
+                    const pnlPercent = ((currentPrice - Number(pos.avgCost)) / Number(pos.avgCost)) * 100;
 
                     return (
                       <div
@@ -761,13 +803,9 @@ export default function BacktestSimulator() {
                         </div>
                         <div className="text-right">
                           <div className="text-xs text-muted-foreground">市值 ${marketValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                          {currentPrice > 0 ? (
-                            <div className={`text-xs font-bold ${pnl >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-                              {pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}% ({pnl >= 0 ? '+' : ''}${pnl.toFixed(0)})
-                            </div>
-                          ) : (
-                            <div className="text-xs text-muted-foreground">切换查看盈亏</div>
-                          )}
+                          <div className={`text-xs font-bold ${pnl >= 0 ? 'text-red-500' : 'text-green-500'}`}>
+                            {pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}% ({pnl >= 0 ? '+' : ''}${pnl.toFixed(0)})
+                          </div>
                         </div>
                       </div>
                     );

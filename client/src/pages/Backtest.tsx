@@ -14,7 +14,7 @@ interface BacktestSession {
   status: string;
   createdAt: string;
   updatedAt: string;
-  totalPositionCost?: string;  // 持仓总成本（后端新增字段）
+  totalMarketValue?: string;  // 持仓总市值（后端新增字段）
   positionCount?: number;       // 持仓股票数量（后端新增字段）
 }
 
@@ -202,8 +202,8 @@ export default function Backtest() {
               我的存档 ({sessions.length})
             </h2>
             {sessions.map(session => {
-              // 总资产 = 当前现金余额 + 持仓股票价值（成本）
-              const positionValue = Number(session.totalPositionCost || 0);
+              // 总资产 = 当前现金余额 + 持仓股票实时市值
+              const positionValue = Number(session.totalMarketValue || 0);
               const totalAssets = Number(session.currentBalance) + positionValue;
               const totalPnl = totalAssets - Number(session.initialBalance);
               const totalPnlPercent = (totalPnl / Number(session.initialBalance)) * 100;
