@@ -6,6 +6,7 @@ import LoginDialog from '@/components/LoginDialog';
 import FociDashboard from '@/components/FociDashboard';
 import FociAssistant from '@/components/FociAssistant';
 import FociBloggerTracker from '@/components/FociBloggerTracker';
+import VIPNewsFlow from '@/components/VIPNewsFlow';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWatchlist } from '@/contexts/WatchlistContext';
 import { fetchStockQuote, US_STOCKS, SECTOR_NAMES } from '@/lib/stockApi';
@@ -441,6 +442,9 @@ export default function Home() {
             <p className="text-sm text-muted-foreground">暂无数据</p>
           )}
         </section>
+
+        {/* 重要人物信息流 */}
+        <VIPNewsFlow watchlistTickers={watchlist} />
 
         {/* FOCI 智能助手 - 市场情绪面板 - 置底 */}
         <FociDashboard />
