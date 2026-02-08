@@ -38,9 +38,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      <Route path="/">
-        {() => <ProtectedRoute path="/" component={Home} />}
-      </Route>
+      <Route path="/" component={Home} />
       <Route path="/stock/:symbol">
         {(params) => <ProtectedRoute path={`/stock/${params.symbol}`} component={() => <StockDetail />} />}
       </Route>

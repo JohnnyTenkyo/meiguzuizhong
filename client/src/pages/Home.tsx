@@ -3,6 +3,9 @@ import { useLocation } from 'wouter';
 import { Search, Star, TrendingUp, Zap, BarChart3, LogIn, LogOut, User, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LoginDialog from '@/components/LoginDialog';
+import FociDashboard from '@/components/FociDashboard';
+import FociAssistant from '@/components/FociAssistant';
+import FociBloggerTracker from '@/components/FociBloggerTracker';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWatchlist } from '@/contexts/WatchlistContext';
 import { fetchStockQuote, US_STOCKS, SECTOR_NAMES } from '@/lib/stockApi';
@@ -251,6 +254,12 @@ export default function Home() {
           )}
         </div>
 
+        {/* FOCI 智能助手 - 市场情绪面板 */}
+        <FociDashboard />
+
+        {/* FOCI 博主持仓追踪 */}
+        <FociBloggerTracker />
+
         {/* Market Overview - Three major indices + BTC + Gold */}
         <section>
           <h2 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-1.5">
@@ -441,6 +450,7 @@ export default function Home() {
       </main>
 
       <LoginDialog open={showLogin} onClose={() => setShowLogin(false)} />
+      <FociAssistant />
     </div>
   );
 }
