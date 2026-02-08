@@ -2,16 +2,9 @@ import { bigint, decimal, int, mysqlEnum, mysqlTable, text, timestamp, varchar }
 
 /**
  * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
  */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -24,6 +17,22 @@ export const users = mysqlTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+/**
+ * Local users table for username/password authentication
+ */
+export const localUsers = mysqlTable("local_users", {
+  id: int("id").autoincrement().primaryKey(),
+  username: varchar("username", { length: 64 }).notNull().unique(),
+  passwordHash: varchar("passwordHash", { length: 256 }).notNull(),
+  name: varchar("name", { length: 128 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+});
+
+export type LocalUser = typeof localUsers.$inferSelect;
+export type InsertLocalUser = typeof localUsers.$inferInsert;
 
 /**
  * Watchlist table for storing user's favorite stocks
@@ -43,7 +52,7 @@ export type InsertWatchlist = typeof watchlist.$inferInsert;
  */
 export const backtestSessions = mysqlTable("backtest_sessions", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  localUserId: int("localUserId").notNull().references(() => localUsers.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 128 }).notNull(),
   initialBalance: decimal("initialBalance", { precision: 16, scale: 2 }).notNull(),
   currentBalance: decimal("currentBalance", { precision: 16, scale: 2 }).notNull(),

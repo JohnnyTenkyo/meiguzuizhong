@@ -6,8 +6,10 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
-import { backtestApiRouter } from "../backtestRouter";
 import { serveStatic, setupVite } from "./vite";
+import { initMomentumWebSocket } from "../momentumWebSocket";
+import { authApiRouter } from "../authRouter";
+import { backtestApiRouter } from "../backtestRouter";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -36,7 +38,8 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
-  // Backtest API routes
+  // Custom API routes
+  app.use("/api/auth", authApiRouter);
   app.use("/api/backtest", backtestApiRouter);
   // tRPC API
   app.use(
@@ -46,6 +49,9 @@ async function startServer() {
       createContext,
     })
   );
+  // Initialize WebSocket for momentum updates (before Vite to avoid HMR conflicts)
+  initMomentumWebSocket(server);
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);

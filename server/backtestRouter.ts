@@ -1,34 +1,22 @@
 import { Router } from "express";
 import { getDb } from "./db";
-import { backtestSessions, backtestTrades, backtestPositions, users } from "../drizzle/schema";
+import { backtestSessions, backtestTrades, backtestPositions, localUsers } from "../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { jwtVerify } from "jose";
-import { ENV } from "./_core/env";
-
-const JWT_SECRET = new TextEncoder().encode(ENV.cookieSecret);
-
-async function verifyToken(token: string) {
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload;
-  } catch (err) {
-    return null;
-  }
-}
+import { verifyToken } from "./authRouter";
 
 export const backtestApiRouter = Router();
 
 // Middleware to verify auth
-async function authMiddleware(req: any, res: any, next: any) {
+function authMiddleware(req: any, res: any, next: any) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ success: false, error: "未登录" });
   }
-  const decoded = await verifyToken(authHeader.substring(7));
+  const decoded = verifyToken(authHeader.substring(7));
   if (!decoded) {
     return res.status(401).json({ success: false, error: "登录已过期" });
   }
-  req.userId = (decoded as any).userId;
+  req.userId = decoded.userId;
   next();
 }
 
@@ -41,32 +29,10 @@ backtestApiRouter.get("/sessions", async (req: any, res) => {
     if (!db) return res.json({ success: false, error: "数据库不可用" });
     
     const sessions = await db.select().from(backtestSessions)
-      .where(eq(backtestSessions.userId, req.userId))
+      .where(eq(backtestSessions.localUserId, req.userId))
       .orderBy(desc(backtestSessions.updatedAt));
     
-    // For each session, calculate total assets (cash + positions market value)
-    // Note: We can't get real-time prices here, so we use totalCost as approximation
-    // In a real system, you'd fetch current prices for each position
-    const sessionsWithTotalAssets = await Promise.all(sessions.map(async (session) => {
-      const positions = await db.select().from(backtestPositions)
-        .where(eq(backtestPositions.sessionId, session.id));
-      
-      // Sum up all position values (using totalCost as market value approximation)
-      const positionsValue = positions.reduce((sum, pos) => {
-        return sum + Number(pos.totalCost);
-      }, 0);
-      
-      // Total assets = cash + positions value
-      const totalAssets = Number(session.currentBalance) + positionsValue;
-      
-      // Return session with updated currentBalance to reflect total assets
-      return {
-        ...session,
-        currentBalance: String(totalAssets.toFixed(2)),
-      };
-    }));
-    
-    return res.json({ success: true, sessions: sessionsWithTotalAssets });
+    return res.json({ success: true, sessions });
   } catch (err) {
     console.error("List sessions error:", err);
     return res.json({ success: false, error: "获取存档失败" });
@@ -85,7 +51,7 @@ backtestApiRouter.post("/sessions", async (req: any, res) => {
     if (!db) return res.json({ success: false, error: "数据库不可用" });
     
     const result = await db.insert(backtestSessions).values({
-      userId: req.userId,
+      localUserId: req.userId,
       name,
       initialBalance: String(initialBalance),
       currentBalance: String(initialBalance),
@@ -113,7 +79,7 @@ backtestApiRouter.get("/sessions/:id", async (req: any, res) => {
     
     const sessionId = parseInt(req.params.id);
     const sessions = await db.select().from(backtestSessions)
-      .where(and(eq(backtestSessions.id, sessionId), eq(backtestSessions.userId, req.userId)));
+      .where(and(eq(backtestSessions.id, sessionId), eq(backtestSessions.localUserId, req.userId)));
     
     if (sessions.length === 0) {
       return res.json({ success: false, error: "存档不存在" });
@@ -153,7 +119,7 @@ backtestApiRouter.patch("/sessions/:id", async (req: any, res) => {
     
     await db.update(backtestSessions)
       .set(updateData)
-      .where(and(eq(backtestSessions.id, sessionId), eq(backtestSessions.userId, req.userId)));
+      .where(and(eq(backtestSessions.id, sessionId), eq(backtestSessions.localUserId, req.userId)));
     
     const sessions = await db.select().from(backtestSessions).where(eq(backtestSessions.id, sessionId));
     return res.json({ success: true, session: sessions[0] });
@@ -171,7 +137,7 @@ backtestApiRouter.delete("/sessions/:id", async (req: any, res) => {
     
     const sessionId = parseInt(req.params.id);
     await db.delete(backtestSessions)
-      .where(and(eq(backtestSessions.id, sessionId), eq(backtestSessions.userId, req.userId)));
+      .where(and(eq(backtestSessions.id, sessionId), eq(backtestSessions.localUserId, req.userId)));
     
     return res.json({ success: true });
   } catch (err) {
@@ -195,7 +161,7 @@ backtestApiRouter.post("/sessions/:id/trade", async (req: any, res) => {
     
     // Get session
     const sessions = await db.select().from(backtestSessions)
-      .where(and(eq(backtestSessions.id, sessionId), eq(backtestSessions.userId, req.userId)));
+      .where(and(eq(backtestSessions.id, sessionId), eq(backtestSessions.localUserId, req.userId)));
     
     if (sessions.length === 0) {
       return res.json({ success: false, error: "存档不存在" });

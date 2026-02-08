@@ -65,6 +65,14 @@ export default function Screener() {
   const [ladderLevels, setLadderLevels] = useState<TimeInterval[]>(['4h']);
   const [momentumEnabled, setMomentumEnabled] = useState(false);
   const [momentumTypes, setMomentumTypes] = useState<Array<'double_digit_up' | 'yellow_cross_green' | 'green_to_red' | 'strong_buy'>>(['double_digit_up']);
+  // 缠论条件
+  const [chanLunEnabled, setChanLunEnabled] = useState(false);
+  const [chanLunLevels, setChanLunLevels] = useState<TimeInterval[]>(['1d']);
+  const [chanLunType, setChanLunType] = useState<'buy' | 'sell'>('buy');
+  // 高级禅动条件
+  const [advChanEnabled, setAdvChanEnabled] = useState(false);
+  const [advChanLevels, setAdvChanLevels] = useState<TimeInterval[]>(['1d']);
+  const [advChanType, setAdvChanType] = useState<'buy' | 'sell' | 'near_support' | 'near_zhongshu'>('buy');
 
   const toggleMomentumType = (type: 'double_digit_up' | 'yellow_cross_green' | 'green_to_red' | 'strong_buy') => {
     setMomentumTypes(prev =>
@@ -78,7 +86,7 @@ export default function Screener() {
     );
   };
 
-  const hasCondition = (bspEnabled && bspLevels.length > 0) || (cdEnabled && cdLevels.length > 0) || (ladderEnabled && ladderLevels.length > 0) || momentumEnabled;
+  const hasCondition = (bspEnabled && bspLevels.length > 0) || (cdEnabled && cdLevels.length > 0) || (ladderEnabled && ladderLevels.length > 0) || momentumEnabled || (chanLunEnabled && chanLunLevels.length > 0) || (advChanEnabled && advChanLevels.length > 0);
 
   // Pre-filtered stock count
   const filteredStockCount = useMemo(() => {
@@ -113,6 +121,18 @@ export default function Screener() {
         };
         conditions.push({ indicator: indicatorMap[type] || type, intervals: ['1d'] });
       }
+    }
+    if (chanLunEnabled && chanLunLevels.length > 0) {
+      conditions.push({ indicator: chanLunType === 'buy' ? 'chanlun_buy' : 'chanlun_sell', intervals: chanLunLevels });
+    }
+    if (advChanEnabled && advChanLevels.length > 0) {
+      const advIndicatorMap: Record<string, string> = {
+        'buy': 'advanced_chan_buy',
+        'sell': 'advanced_chan_sell',
+        'near_support': 'near_golden_support',
+        'near_zhongshu': 'near_zhongshu',
+      };
+      conditions.push({ indicator: advIndicatorMap[advChanType] || 'advanced_chan_buy', intervals: advChanLevels });
     }
 
     const minPrice = priceMin ? parseFloat(priceMin) : 0;
@@ -173,14 +193,14 @@ export default function Screener() {
         </div>
       </header>
 
-      <main className="container py-6 space-y-6 max-w-4xl pb-24 md:pb-6">
-        {/* Running status banner - fixed at bottom on mobile, inline on desktop */}
+      <main className="container py-6 space-y-6 max-w-4xl">
+        {/* Running/Completed status banner */}
         {isRunning && currentJob && (
-          <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-primary/30 bg-primary/5 backdrop-blur-md p-3 shadow-lg md:relative md:rounded-lg md:border md:bottom-auto md:left-auto md:right-auto md:z-auto md:p-4">
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
             <div className="flex items-center gap-3 mb-2">
               <Loader2 size={16} className="animate-spin text-primary" />
               <span className="text-sm font-medium">后台筛选进行中...</span>
-              <span className="text-xs text-muted-foreground ml-auto hidden md:inline">
+              <span className="text-xs text-muted-foreground ml-auto">
                 你可以离开此页面，筛选完成后会在顶部通知你
               </span>
             </div>
@@ -361,6 +381,82 @@ export default function Screener() {
                     <span className="text-sm">{type.label}</span>
                   </label>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* Advanced Chan - 高级禅动 */}
+          <div className="rounded-lg border border-emerald-500/30 bg-card p-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={advChanEnabled} onChange={e => setAdvChanEnabled(e.target.checked)} className="w-4 h-4 rounded border-border" />
+              <span className="text-emerald-500 font-bold text-sm">禅</span>
+              <span className="text-sm font-medium">高级禅动指标</span>
+            </label>
+            {advChanEnabled && (
+              <div className="mt-3 ml-8 space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: 'buy' as const, label: '买入信号', color: 'bg-emerald-500 text-white' },
+                    { value: 'sell' as const, label: '卖出信号', color: 'bg-rose-500 text-white' },
+                    { value: 'near_support' as const, label: '近黄金支撑线', color: 'bg-green-500 text-white' },
+                    { value: 'near_zhongshu' as const, label: '近主力中枢', color: 'bg-yellow-500 text-white' },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setAdvChanType(opt.value)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        advChanType === opt.value
+                          ? opt.color
+                          : 'bg-secondary text-secondary-foreground hover:bg-accent'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <LevelSelector levels={advChanLevels} setLevels={setAdvChanLevels} activeColor="bg-emerald-500 text-white" />
+                <p className="text-xs text-muted-foreground">
+                  基于高级缠论分析，包含趋势线买卖点、主力中枢、D90支撑压力线等指标
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* ChanLun - 缠论分型 */}
+          <div className="rounded-lg border border-orange-500/30 bg-card p-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={chanLunEnabled} onChange={e => setChanLunEnabled(e.target.checked)} className="w-4 h-4 rounded border-border" />
+              <span className="text-orange-500 font-bold text-sm">缠</span>
+              <span className="text-sm font-medium">缠论分型 + MACD背离</span>
+            </label>
+            {chanLunEnabled && (
+              <div className="mt-3 ml-8 space-y-3">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setChanLunType('buy')}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                      chanLunType === 'buy'
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-secondary text-secondary-foreground hover:bg-accent'
+                    }`}
+                  >
+                    底分型 + 底背离（买入）
+                  </button>
+                  <button
+                    onClick={() => setChanLunType('sell')}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                      chanLunType === 'sell'
+                        ? 'bg-purple-500 text-white'
+                        : 'bg-secondary text-secondary-foreground hover:bg-accent'
+                    }`}
+                  >
+                    顶分型 + 顶背离（卖出）
+                  </button>
+                </div>
+                <LevelSelector levels={chanLunLevels} setLevels={setChanLunLevels} activeColor="bg-orange-500 text-white" />
+                <p className="text-xs text-muted-foreground">
+                  基于缠论顶底分型识别，配合MACD背离给出买卖点信号
+                </p>
               </div>
             )}
           </div>

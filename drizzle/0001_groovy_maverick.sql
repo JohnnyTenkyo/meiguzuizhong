@@ -11,7 +11,7 @@ CREATE TABLE `backtest_positions` (
 --> statement-breakpoint
 CREATE TABLE `backtest_sessions` (
 	`id` int AUTO_INCREMENT NOT NULL,
-	`userId` int NOT NULL,
+	`localUserId` int NOT NULL,
 	`name` varchar(128) NOT NULL,
 	`initialBalance` decimal(16,2) NOT NULL,
 	`currentBalance` decimal(16,2) NOT NULL,
@@ -37,6 +37,18 @@ CREATE TABLE `backtest_trades` (
 	CONSTRAINT `backtest_trades_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
+CREATE TABLE `local_users` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`username` varchar(64) NOT NULL,
+	`passwordHash` varchar(256) NOT NULL,
+	`name` varchar(128),
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	`lastSignedIn` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `local_users_id` PRIMARY KEY(`id`),
+	CONSTRAINT `local_users_username_unique` UNIQUE(`username`)
+);
+--> statement-breakpoint
 CREATE TABLE `watchlist` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
@@ -46,6 +58,6 @@ CREATE TABLE `watchlist` (
 );
 --> statement-breakpoint
 ALTER TABLE `backtest_positions` ADD CONSTRAINT `backtest_positions_sessionId_backtest_sessions_id_fk` FOREIGN KEY (`sessionId`) REFERENCES `backtest_sessions`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `backtest_sessions` ADD CONSTRAINT `backtest_sessions_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `backtest_sessions` ADD CONSTRAINT `backtest_sessions_localUserId_local_users_id_fk` FOREIGN KEY (`localUserId`) REFERENCES `local_users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `backtest_trades` ADD CONSTRAINT `backtest_trades_sessionId_backtest_sessions_id_fk` FOREIGN KEY (`sessionId`) REFERENCES `backtest_sessions`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `watchlist` ADD CONSTRAINT `watchlist_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;

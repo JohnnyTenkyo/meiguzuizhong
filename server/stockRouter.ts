@@ -3,6 +3,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import axios from "axios";
 import { calculateMomentum, formatMomentumForChart } from "./tradingMomentum";
 import { fetchFinnhubCandles, fetchFinnhubQuote } from "./finnhubAdapter";
+import { fetchAlphaVantageCandles, fetchAlphaVantageQuote } from "./alphaVantageAdapter";
 
 // In-memory cache
 const cache: Map<string, { data: any; expires: number }> = new Map();
@@ -238,8 +239,16 @@ export const stockRouter = router({
           candles = await fetchFinnhubCandles(symbol, interval);
           console.log(`[DataSource] Finnhub success for ${symbol} ${interval}`);
         } catch (finnhubError) {
-          console.error(`[DataSource] Both data sources failed for ${symbol} ${interval}`);
-          throw new Error('Failed to fetch data from all available sources');
+          console.warn(`[DataSource] Finnhub failed for ${symbol} ${interval}, switching to Alpha Vantage...`, finnhubError);
+          
+          try {
+            // 自动切换到 Alpha Vantage 第三个备用数据源
+            candles = await fetchAlphaVantageCandles(symbol, interval);
+            console.log(`[DataSource] Alpha Vantage success for ${symbol} ${interval}`);
+          } catch (alphaError) {
+            console.error(`[DataSource] All three data sources failed for ${symbol} ${interval}`);
+            throw new Error('Failed to fetch data from all available sources (Yahoo, Finnhub, Alpha Vantage)');
+          }
         }
       }
 
@@ -315,8 +324,21 @@ export const stockRouter = router({
           };
           console.log(`[DataSource] Finnhub quote success for ${input.symbol}`);
         } catch (finnhubError) {
-          console.error(`[DataSource] Both data sources failed for quote ${input.symbol}`);
-          throw new Error('Failed to fetch quote from all available sources');
+          console.warn(`[DataSource] Finnhub quote failed for ${input.symbol}, switching to Alpha Vantage...`);
+          
+          try {
+            // 自动切换到 Alpha Vantage 第三个备用数据源
+            const alphaQuote = await fetchAlphaVantageQuote(input.symbol);
+            quote = {
+              symbol: input.symbol,
+              name: input.symbol,
+              ...alphaQuote,
+            };
+            console.log(`[DataSource] Alpha Vantage quote success for ${input.symbol}`);
+          } catch (alphaError) {
+            console.error(`[DataSource] All three data sources failed for quote ${input.symbol}`);
+            throw new Error('Failed to fetch quote from all available sources (Yahoo, Finnhub, Alpha Vantage)');
+          }
         }
       }
 

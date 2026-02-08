@@ -1,18 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useLocation } from 'wouter';
-import { ArrowLeft, Star, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Star, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import StockChart from '@/components/StockChart';
 import SignalPanel from '@/components/SignalPanel';
-// LoginDialog removed - using Manus OAuth
+import LoginDialog from '@/components/LoginDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWatchlist } from '@/contexts/WatchlistContext';
 
 import { fetchStockData, fetchStockQuote, getStockSectors, SECTOR_NAMES } from '@/lib/stockApi';
 import type { StockSector } from '@/lib/stockApi';
 import { trpc } from '@/lib/trpc';
-import { calculateCDSignals, calculateBuySellPressure, calculateNXSignals, calculateMomentum } from '@/lib/indicators';
-import { Candle, TimeInterval, CDSignal, BuySellPressure, NXSignal, MomentumSignal, StockQuote } from '@/lib/types';
+import { calculateCDSignals, calculateBuySellPressure, calculateNXSignals, calculateMomentum, calculateChanLunSignals, calculateAdvancedChanData, calculateAdvancedChanSignals, findBiPoints, findZhongShu, findChanBuySellPoints } from '@/lib/indicators';
+import { Candle, TimeInterval, CDSignal, BuySellPressure, NXSignal, MomentumSignal, ChanLunSignal, AdvancedChanData, AdvancedChanSignal, BiPoint, ZhongShu, StockQuote } from '@/lib/types';
 
 const INTERVALS: { value: TimeInterval; label: string }[] = [
   { value: '1m', label: '1m' },
@@ -48,12 +48,10 @@ export default function StockDetail() {
   // Fetch company profile
   const { data: companyProfile } = trpc.stock.getCompanyProfile.useQuery(
     { symbol },
-    { staleTime: 24 * 60 * 60 * 1000 } // 24 hours
+    { staleTime: 24 * 60 * 60 * 1000 }
   );
 
-  // Get stock sectors from local config
   const stockSectors = getStockSectors(symbol);
-
 
   // Fetch data
   useEffect(() => {
@@ -78,11 +76,52 @@ export default function StockDetail() {
     return () => { cancelled = true; };
   }, [symbol, interval]);
 
+  // Indicator toggles
+  const [showChanLun, setShowChanLun] = useState(false);
+  const [showAdvancedChan, setShowAdvancedChan] = useState(false);
+  const [showLadder, setShowLadder] = useState(true);
+  const [showCDLabels, setShowCDLabels] = useState(true);
+
   // Calculate indicators
-  const cdSignals = useMemo<CDSignal[]>(() => calculateCDSignals(candles), [candles]);
-  const buySellPressure = useMemo<BuySellPressure[]>(() => calculateBuySellPressure(candles), [candles]);
-  const nxSignals = useMemo<NXSignal[]>(() => calculateNXSignals(candles), [candles]);
-  const momentumSignals = useMemo<MomentumSignal[]>(() => calculateMomentum(candles), [candles]);
+  const cdSignals = useMemo<CDSignal[]>(() => {
+    try { return calculateCDSignals(candles); } catch { return []; }
+  }, [candles]);
+  const buySellPressure = useMemo<BuySellPressure[]>(() => {
+    try { return calculateBuySellPressure(candles); } catch { return []; }
+  }, [candles]);
+  const nxSignals = useMemo<NXSignal[]>(() => {
+    try { return calculateNXSignals(candles); } catch { return []; }
+  }, [candles]);
+  const momentumSignals = useMemo<MomentumSignal[]>(() => {
+    try { return calculateMomentum(candles); } catch { return []; }
+  }, [candles]);
+  // Always calculate indicators regardless of toggle state (for screener/signal panel)
+  const chanLunSignals = useMemo<ChanLunSignal[]>(() => {
+    if (candles.length < 10) return [];
+    try { return calculateChanLunSignals(candles); } catch { return []; }
+  }, [candles]);
+  const advancedChanData = useMemo<AdvancedChanData[]>(() => {
+    if (candles.length < 30) return [];
+    try { return calculateAdvancedChanData(candles); } catch { return []; }
+  }, [candles]);
+  const advancedChanSignals = useMemo<AdvancedChanSignal[]>(() => {
+    if (advancedChanData.length === 0) return [];
+    try { return calculateAdvancedChanSignals(candles, advancedChanData); } catch { return []; }
+  }, [candles, advancedChanData]);
+
+  // Bi points (笔端点) and Zhongshu (中枢) for advanced chan visualization
+  const biPoints = useMemo<BiPoint[]>(() => {
+    if (candles.length < 10) return [];
+    try { return findBiPoints(candles); } catch { return []; }
+  }, [candles]);
+  const zhongshus = useMemo<ZhongShu[]>(() => {
+    if (biPoints.length < 4) return [];
+    try { return findZhongShu(biPoints, candles); } catch { return []; }
+  }, [biPoints, candles]);
+  const chanBuySellSignals = useMemo<AdvancedChanSignal[]>(() => {
+    if (biPoints.length < 5) return [];
+    try { return findChanBuySellPoints(biPoints, zhongshus, candles); } catch { return []; }
+  }, [biPoints, zhongshus, candles]);
 
   const handleFavorite = () => {
     if (!isLoggedIn) {
@@ -107,13 +146,15 @@ export default function StockDetail() {
               <span className="text-xl font-bold tracking-tight">{symbol}</span>
               {quote && (
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="data-mono font-semibold text-lg">${quote.price.toFixed(2)}</span>
+                  <span className="data-mono font-semibold text-lg">
+                    ${quote.price != null ? quote.price.toFixed(2) : '--'}
+                  </span>
                   <span className={`data-mono font-medium ${
-                    quote.change >= 0 
+                    (quote.change ?? 0) >= 0 
                       ? 'text-red-500' 
                       : 'text-green-500'
                   }`}>
-                    {quote.change >= 0 ? '+' : ''}{quote.change.toFixed(2)} ({quote.changePercent >= 0 ? '+' : ''}{quote.changePercent.toFixed(2)}%)
+                    {(quote.change ?? 0) >= 0 ? '+' : ''}{(quote.change ?? 0).toFixed(2)} ({(quote.changePercent ?? 0) >= 0 ? '+' : ''}{(quote.changePercent ?? 0).toFixed(2)}%)
                   </span>
                 </div>
               )}
@@ -198,7 +239,7 @@ export default function StockDetail() {
           </div>
         )}
 
-        {/* Interval selector */}
+        {/* Interval selector + indicator toggles */}
         <div className="flex items-center gap-1 flex-wrap">
           {INTERVALS.map(iv => (
             <button
@@ -213,6 +254,52 @@ export default function StockDetail() {
               {iv.label}
             </button>
           ))}
+          <div className="ml-2 border-l border-border pl-2 flex gap-1">
+            <button
+              onClick={() => setShowLadder(!showLadder)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                showLadder
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-secondary text-secondary-foreground hover:bg-accent'
+              }`}
+            >
+              黄蓝梯子
+            </button>
+            <button
+              onClick={() => setShowChanLun(!showChanLun)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                showChanLun
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-secondary text-secondary-foreground hover:bg-accent'
+              }`}
+            >
+              缠论分型
+            </button>
+            <button
+              onClick={() => setShowAdvancedChan(!showAdvancedChan)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                showAdvancedChan
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-secondary text-secondary-foreground hover:bg-accent'
+              }`}
+            >
+              高级禅动
+            </button>
+            <button
+              onClick={() => {
+                console.log('StockDetail CD标记按钮被点击，当前状态:', showCDLabels);
+                setShowCDLabels(!showCDLabels);
+              }}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                showCDLabels
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-secondary text-secondary-foreground hover:bg-accent'
+              }`}
+              title="显示/隐藏CD抄底文字标记"
+            >
+              {showCDLabels ? 'CD标记' : 'CD标记'}
+            </button>
+          </div>
         </div>
 
         {/* Chart area */}
@@ -236,6 +323,16 @@ export default function StockDetail() {
               cdSignals={cdSignals}
               buySellPressure={buySellPressure}
               momentumSignals={momentumSignals}
+              chanLunSignals={chanLunSignals}
+              showChanLun={showChanLun}
+              advancedChanData={advancedChanData}
+              advancedChanSignals={advancedChanSignals}
+              showAdvancedChan={showAdvancedChan}
+              showLadder={showLadder}
+              showCDLabels={showCDLabels}
+              biPoints={biPoints}
+              zhongshus={zhongshus}
+              chanBuySellSignals={chanBuySellSignals}
               height={380}
             />
 
@@ -247,13 +344,16 @@ export default function StockDetail() {
                 buySellPressure={buySellPressure}
                 nxSignals={nxSignals}
                 momentumSignals={momentumSignals}
+                chanLunSignals={chanLunSignals}
+                advancedChanSignals={advancedChanSignals}
+                chanBuySellSignals={chanBuySellSignals}
               />
             </div>
           </>
         )}
       </main>
 
-      {/* LoginDialog removed - using Manus OAuth */}
+      <LoginDialog open={showLogin} onClose={() => setShowLogin(false)} />
     </div>
   );
 }

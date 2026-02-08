@@ -1,140 +1,108 @@
-# 美股智能分析选股系统 - 开发任务清单
+# Project TODO - Meigu6 Live Migration
 
-## 数据库迁移
-- [x] 迁移用户表 schema
-- [x] 迁移股票数据相关表
-- [x] 迁移选股条件和策略表
-- [x] 执行数据库迁移 SQL
+- [x] Migrate database schema (users, localUsers, backtestSessions, backtestTrades, backtestPositions)
+- [x] Migrate drizzle relations
+- [x] Migrate shared types and constants
+- [x] Migrate server db.ts query helpers
+- [x] Migrate server routers (stockRouter, backtestRouter, authRouter)
+- [x] Migrate server finnhubAdapter and momentumWebSocket
+- [x] Migrate server tradingMomentum and orderBook
+- [x] Migrate client lib files (indicators, stockApi, types, utils)
+- [x] Migrate client hooks (useComposition, useMomentumWebSocket, usePersistFn)
+- [x] Migrate client contexts (AuthContext, ScreenerContext, WatchlistContext)
+- [x] Migrate StockChart component with TradingView Lightweight Charts
+- [x] Migrate SignalPanel component (always show chanlun signals)
+- [x] Migrate LoginDialog and ManusDialog components
+- [x] Migrate ScreenerNotificationBar component
+- [x] Migrate Home page
+- [x] Migrate Login page
+- [x] Migrate StockDetail page
+- [x] Migrate Backtest page
+- [x] Migrate BacktestSimulator page with K-line replay
+- [x] Migrate Screener page
+- [x] Migrate App.tsx routing
+- [x] Migrate index.css styles
+- [x] Configure API keys (Alpha Vantage, Massive, Finnhub)
+- [x] Configure authentication (local + Manus OAuth)
+- [x] Install required npm packages (lightweight-charts, etc.)
+- [x] Push database migrations
+- [x] Fix K-line display ratio (40% K-lines, 60% blank on right)
+- [x] Fix timeScale sync (main chart drives sub-charts)
+- [x] Fix chandong zhongshu colors (purple/pink)
+- [x] Fix signal panel always show chanlun signals
+- [x] Test and verify all features
+- [x] Save checkpoint and publish
 
-## 后端业务逻辑迁移
-- [x] 迁移 tRPC 路由定义
-- [x] 迁移股票数据获取逻辑
-- [x] 迁移技术指标计算函数
-- [x] 迁移选股筛选逻辑
-- [x] 迁移 WebSocket 实时数据推送
+## Bug Fixes - Round 2
 
-## 前端组件迁移
-- [ ] 迁移登录页面
-- [ ] 迁移仪表盘布局
-- [ ] 迁移股票列表组件
-- [ ] 迁移股票图表组件（lightweight-charts）
-- [ ] 迁移技术指标展示组件
-- [ ] 迁移选股条件设置表单
+- [x] Fix 1-minute K-line chart not opening in backtest system
+- [x] Fix 5-minute K-line chart not opening in backtest system
+- [x] Fix 15-minute K-line chart not opening in backtest system
+- [x] Fix 30-minute K-line chart not opening in backtest system
+- [x] Fix chanlun fractal signals calculation to work independently of main chart indicator toggle
+- [x] Test all interval switches and verify signals always appear
+- [x] Save checkpoint with fixes
 
-## API 集成
-- [ ] 配置 Yahoo Finance API 或 Manus Data API
-- [ ] 测试股票数据获取接口
-- [ ] 配置实时数据更新机制
+## Bug Fixes - Round 3
 
-## 认证和权限
-- [ ] 配置 Manus OAuth 认证流程
-- [ ] 实现用户角色权限控制
-- [ ] 测试登录登出功能
+- [x] Add ⚡ marker on buy-sell pressure chart when buy momentum > previous day by 100% (2x)
+- [x] Add 💀 marker on buy-sell pressure chart when sell momentum > previous day by 100% (2x)
+- [x] Add ⚡ marker on momentum chart when red bar (buy pressure) > previous day by 100%
+- [x] Add 💀 marker on momentum chart when green bar (sell pressure) > previous day by 100%
+- [x] Add "弱转强" text marker when yellow line crosses green line + red bar > previous day by 100%
+- [x] Add "强转弱" text marker when green line crosses yellow line + green bar > previous day by 100%
+- [x] Test and verify all alert markers display correctly
+- [x] Save final checkpoint with all fixes
 
-## 生产环境配置
-- [ ] 配置数据库连接
-- [ ] 配置环境变量
-- [ ] 配置 S3 存储（如需要）
-- [ ] 优化构建配置
+## Bug Fixes - Round 4
 
-## 测试和发布
-- [ ] 功能测试
-- [ ] 性能测试
-- [ ] 创建生产检查点
-- [ ] 发布永久网站
+- [x] Add ⚡💀 marker counts to momentum signal analysis panel
+- [x] Add "弱转强" and "强转弱" counts to momentum signal analysis panel
+- [x] Fix "强卖" showing 0 in momentum signal analysis (replaced with ⚡💀 counts)
+- [x] Test and verify all signal counts are correct
+- [x] Save final checkpoint
 
-## 完整页面迁移（用户要求）
-- [x] 修复所有前端组件的依赖问题
-- [x] 完整迁移 Home 页面（市场概览、自选股、推荐股票）
-- [x] 完整迁移 StockDetail 页面（K线图、技术指标、信号分析）
-- [x] 完整迁移 Screener 页面（选股筛选器）
-- [x] 完整迁移 Backtest 页面（回测会话列表）
-- [x] 完整迁移 BacktestSimulator 页面（回测模拟器）
-- [x] 实现简易用户认证（用户名/密码登录注册改密）
-- [x] 测试所有页面功能
+## Bug Fixes & Features - Round 5
 
-## 图表和指标修复（用户报告问题）
-- [x] 详细检查原项目的 StockChart 组件实现
-- [x] 检查原项目的技术指标计算（indicators.ts）
-- [x] 对比并修复 lightweight-charts 的使用方式
-- [x] 确保 K线图正确显示
-- [x] 确保技术指标（MACD、蓝黄梯子、买卖力道、动能）正确计算和显示
-- [x] 确保买卖压力指标正确显示
-- [x] 测试图表交互功能
-- [x] 验证所有指标数值准确性
+- [x] Fix buy-sell pressure signal description: change 50% to 100%
+- [x] Add signal time range filter (last 30 days, 90 days, custom range)
+- [x] Supplement intraday data (< 30min) using free API keys (Alpha Vantage, Finnhub, Massive)
+  - Added Alpha Vantage as 3rd fallback data source
+  - Data source priority: Yahoo Finance → Finnhub → Alpha Vantage
+- [x] Fix "next candle" button sometimes jumping back to previous candle
+  - Changed to functional state updates to prevent race conditions
+- [x] Test all fixes and new features
+  - ✅ Buy-sell pressure description updated to 100%
+  - ✅ Time range filter working (All/30d/90d/Custom)
+  - ✅ Next candle button no longer jumps back on rapid clicks
+  - ✅ Alpha Vantage added as 3rd data source
+  - ✅ All signal markers displaying correctly
+- [x] Save final checkpoint
 
-## 回测系统增强（用户新需求）
-- [x] K线图买卖点标注：买入时添加持仓成本线（橙色醒目虚线）
-- [x] K线图买卖点标注：卖出时添加卖出标记
-- [x] 确保买卖标记与CD指标分开显示，不重叠
-- [x] 添加回测绩效统计面板：总收益率
-- [x] 添加回测绩效统计面板：胜率
-- [x] 添加回测绩效统计面板：最大回撤
-- [x] 添加回测绩效统计面板：盈亏比
-- [x] 创建交易历史记录页面：展示每笔交易详情
-- [x] 交易历史记录：时间、价格、数量、盈亏
-- [x] 测试所有回测增强功能
+## UI Optimization - Round 6
 
-## 登录问题修复（用户报告）
-- [x] 调查注册后无法登录的原因
-- [x] 检查注册流程的 session/cookie 设置
-- [x] 检查登录流程的认证逻辑
-- [x] 修复注册后自动登录功能
-- [x] 测试注册和登录流程
+- [x] Increase momentum sub-chart height to make text visible (120 → 150)
+- [x] Change "弱转强"/"强转弱" markers to pure text (removed arrows, using circle shape)
+- [x] Change ⚡💀 markers to pure emoji (using circle shape for consistency)
+- [x] Decrease CD bottom-fishing sub-chart height (120 → 100)
+- [x] Add toggle button for CD "抄底"/"卖出" text markers on main chart
+  - Default: ON (显示)
+  - Does not affect signal statistics or filtering
+  - Only controls visibility of text markers
+- [x] Test all UI changes
+  - ✅ Sub-chart heights adjusted correctly
+  - ✅ Marker styles updated (pure emoji/text)
+  - ✅ CD label toggle working perfectly
+  - ✅ Time range filter functioning
+- [x] Save final checkpoint
 
-## 登录刷新问题（用户再次报告）
-- [x] 检查浏览器控制台错误
-- [x] 检查网络请求和响应
-- [x] 分析页面刷新后的认证流程
-- [x] 修复登录后刷新导致的问题
-- [ ] 测试完整的登录流程
 
-## 移除 Manus OAuth 认证系统（用户要求）
-- [x] 修改 context.ts 移除 Manus OAuth 认证逻辑
-- [x] 简化认证系统只使用本地 JWT token
-- [ ] 测试登录和注册功能
-- [ ] 验证所有页面的认证保护
+## Bug Fixes - Round 7
 
-## 改用 localStorage 存储 JWT token（用户同意）
-- [x] 修改 localAuthRouter 返回 token 而不是设置 cookie
-- [x] 修改前端 Login.tsx 将 token 存储到 localStorage
-- [x] 修改 tRPC client 配置，在每个请求 header 中发送 token
-- [x] 修改 context.ts 从 header 中读取 token
-- [x] 修复 Login.tsx 导航逻辑（使用 refetch + setTimeout）
-- [x] 测试登录和认证流程（注册、登录、页面跳转、所有功能页面访问）
-
-## 回测系统修复（用户报告无法创建存档和进入）
-- [x] 检查回测系统的创建存档功能
-- [x] 检查数据库表和路由配置
-- [x] 迁移 backtestRouter.ts 并修改为使用 users 表
-- [x] 在 index.ts 中注册 /api/backtest 路由
-- [x] 修复创建存档的问题
-- [x] 测试完整的回测流程（创建存档、进入回测、交易操作、交易记录）
-
-## 回测系统UX优化（用户反馈）
-- [x] K线图默认定位到最新一根K线
-- [x] K线图右侧预留50%空白区域，方便查看下一根K线
-- [x] 调整条件选股进度条位置，避免遮挡操作按钮
-- [x] 测试优化后的用户体验
-
-## 回测系统进一步优化（用户新需求）
-- [x] 修复手机端条件选股进度条遮挡按钮问题（改为底部固定）
-- [x] 增强回测绩效分析 - 添加收益曲线图
-- [x] 增强回测绩效分析 - 添加每日盈亏统计
-- [x] 增强回测绩效分析 - 添加按股票分组的盈亏分析
-- [x] 实现回测速度控制 - 添加快进5根K线功能
-- [x] 实现回测速度控制 - 添加快进10根K线功能
-- [x] 测试所有新功能
-
-## 股票详情页和回测系统修复（用户报告）
-- [x] 修复股票详情页 error 错误，无法打开（缓存问题已自动恢复）
-- [x] 修复回测存档盈亏计算 - 应计算总资产（现金+持仓市值）而不是只计算现金
-- [x] 优化K线切换流畅度 - 点击下一根K线时不重新加载图表，保持缩放和位置
-- [x] 增强黄蓝梯子可见性 - 加粗、加深、加亮颜色（lineWidth: 1→3, 颜色改为饱和色）
-- [x] 测试所有修复
-
-## K线切换流畅度深度优化（用户反馈快速点击仍有卡顿）
-- [x] 诊断为什么快速点击下一根K线会显示“加载K线数据...”（session 更新触发 fetchChartData）
-- [x] 修复图表重置和视图归位问题（保持用户的缩放和位置）
-- [x] 让点击下一根K线和上一根K线一样流畅
-- [x] 测试快速连续点击下一根K线（流畅，不卡顿，不重置视图）
+- [x] Fix CD label toggle button visibility - user cannot see it clearly
+  - Changed color from purple to blue for better visibility
+  - Increased button size (h-7→h-8, text-xs→text-sm)
+  - Added emoji indicator (📍) when toggle is ON
+  - Added shadow and transition effects
+- [x] Ensure CD toggle button is positioned correctly and visible in UI
+- [x] Test CD toggle functionality after fix

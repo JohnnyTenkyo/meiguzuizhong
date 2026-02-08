@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { Search, Star, TrendingUp, Zap, BarChart3, LogIn, LogOut, User, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-// LoginDialog removed - using Manus OAuth
+import LoginDialog from '@/components/LoginDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWatchlist } from '@/contexts/WatchlistContext';
 import { fetchStockQuote, US_STOCKS, SECTOR_NAMES } from '@/lib/stockApi';
@@ -22,7 +22,7 @@ export default function Home() {
   const [, navigate] = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
   const isLoggedIn = isAuthenticated;
-  const username = user?.username || 'User';
+  const username = user?.name || user?.email || 'User';
   const { watchlist, isInWatchlist, toggleStock } = useWatchlist();
   const [searchQuery, setSearchQuery] = useState('');
   const [showLogin, setShowLogin] = useState(false);
@@ -440,7 +440,7 @@ export default function Home() {
         </div>
       </main>
 
-      {/* LoginDialog removed - using Manus OAuth */}
+      <LoginDialog open={showLogin} onClose={() => setShowLogin(false)} />
     </div>
   );
 }

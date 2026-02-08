@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { fetchStockData, STOCK_POOL } from '@/lib/stockApi';
 import { Candle, TimeInterval } from '@/lib/types';
-import { calculateCDSignals, calculateBuySellPressure, calculateMomentum, checkBlueLadderStrength } from '@/lib/indicators';
+import { calculateCDSignals, calculateBuySellPressure, calculateMomentum, checkBlueLadderStrength, checkChanLunBuySignal, checkChanLunSellSignal, checkAdvancedChanBuySignal, checkAdvancedChanSellSignal, checkNearGoldenSupport, checkNearZhongshu } from '@/lib/indicators';
 
 // Types
 export interface ScreenerCondition {
@@ -104,6 +104,18 @@ function checkStockConditions(
         const momentum = calculateMomentum(candles);
         const lastSignal = [...momentum].reverse().find(m => m.signal);
         conditionMet = lastSignal?.signal === 'double_digit_up';
+      } else if (cond.indicator === 'chanlun_buy') {
+        conditionMet = checkChanLunBuySignal(candles);
+      } else if (cond.indicator === 'chanlun_sell') {
+        conditionMet = checkChanLunSellSignal(candles);
+      } else if (cond.indicator === 'advanced_chan_buy') {
+        conditionMet = checkAdvancedChanBuySignal(candles);
+      } else if (cond.indicator === 'advanced_chan_sell') {
+        conditionMet = checkAdvancedChanSellSignal(candles);
+      } else if (cond.indicator === 'near_golden_support') {
+        conditionMet = checkNearGoldenSupport(candles);
+      } else if (cond.indicator === 'near_zhongshu') {
+        conditionMet = checkNearZhongshu(candles);
       }
     } catch {
       conditionMet = false;

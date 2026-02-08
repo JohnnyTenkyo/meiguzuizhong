@@ -3,7 +3,6 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { stockRouter } from "./stockRouter";
-import { localAuthRouter } from "./localAuthRouter";
 
 export const appRouter = router({
   system: systemRouter,
@@ -17,7 +16,6 @@ export const appRouter = router({
       } as const;
     }),
   }),
-  localAuth: localAuthRouter,
   stock: stockRouter,
 });
 

@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "bfd37e0a-67ce-48d7-895e-6d00d75cfb12",
-  "prevId": "dcfaeaa3-f697-4c54-a730-aec42c4792bb",
+  "id": "7f5d5cc0-b588-42bc-b6b9-155975e87dc0",
+  "prevId": "40205e8b-a0be-4011-bec7-fe00e4c4f170",
   "tables": {
     "backtest_positions": {
       "name": "backtest_positions",
@@ -97,8 +97,8 @@
           "notNull": true,
           "autoincrement": true
         },
-        "userId": {
-          "name": "userId",
+        "localUserId": {
+          "name": "localUserId",
           "type": "int",
           "primaryKey": false,
           "notNull": true,
@@ -175,12 +175,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "backtest_sessions_userId_users_id_fk": {
-          "name": "backtest_sessions_userId_users_id_fk",
+        "backtest_sessions_localUserId_local_users_id_fk": {
+          "name": "backtest_sessions_localUserId_local_users_id_fk",
           "tableFrom": "backtest_sessions",
-          "tableTo": "users",
+          "tableTo": "local_users",
           "columnsFrom": [
-            "userId"
+            "localUserId"
           ],
           "columnsTo": [
             "id"
@@ -293,6 +293,83 @@
         }
       },
       "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "local_users": {
+      "name": "local_users",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "username": {
+          "name": "username",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "passwordHash": {
+          "name": "passwordHash",
+          "type": "varchar(256)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        },
+        "lastSignedIn": {
+          "name": "lastSignedIn",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "local_users_id": {
+          "name": "local_users_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "local_users_username_unique": {
+          "name": "local_users_username_unique",
+          "columns": [
+            "username"
+          ]
+        }
+      },
       "checkConstraint": {}
     },
     "users": {

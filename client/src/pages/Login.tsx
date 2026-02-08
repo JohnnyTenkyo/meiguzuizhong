@@ -1,173 +1,151 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
+import { BarChart3, Eye, EyeOff, Lock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { trpc } from '@/lib/trpc';
-import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Login() {
   const [, navigate] = useLocation();
-  const [loginUsername, setLoginUsername] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [registerUsername, setRegisterUsername] = useState('');
-  const [registerPassword, setRegisterPassword] = useState('');
+  const { login, register } = useAuth();
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const utils = trpc.useUtils();
-
-  const loginMutation = trpc.localAuth.login.useMutation({
-    onSuccess: async (data) => {
-      if (data.success && data.token) {
-        // Store token in localStorage
-        localStorage.setItem('auth_token', data.token);
-        // Wait for auth query to complete before navigating
-        await utils.auth.me.refetch();
-        // Small delay to ensure state updates
-        setTimeout(() => navigate('/'), 100);
-      }
-    },
-    onError: (err) => {
-      setError(err.message || '登录失败');
-    },
-  });
-
-  const registerMutation = trpc.localAuth.register.useMutation({
-    onSuccess: async (data) => {
-      if (data.success && data.token) {
-        // Store token in localStorage
-        localStorage.setItem('auth_token', data.token);
-        // Wait for auth query to complete before navigating
-        await utils.auth.me.refetch();
-        // Small delay to ensure state updates
-        setTimeout(() => navigate('/'), 100);
-      }
-    },
-    onError: (err) => {
-      setError(err.message || '注册失败');
-    },
-  });
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    loginMutation.mutate({ username: loginUsername, password: loginPassword });
-  };
-
-  const handleRegister = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    if (registerPassword.length < 6) {
-      setError('密码至少需要6个字符');
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!username.trim() || !password.trim()) {
+      setError('请填写用户名和密码');
       return;
     }
-    registerMutation.mutate({ username: registerUsername, password: registerPassword });
+    if (mode === 'register' && password.length < 4) {
+      setError('密码至少4位');
+      return;
+    }
+    setLoading(true);
+    setError('');
+
+    const result = mode === 'login'
+      ? await login(username, password)
+      : await register(username, password);
+
+    setLoading(false);
+    if (result.success) {
+      navigate('/');
+    } else {
+      setError(result.error || '操作失败');
+    }
   };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">美股智能分析</CardTitle>
-          <CardDescription>登录或注册以继续</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">登录</TabsTrigger>
-              <TabsTrigger value="register">注册</TabsTrigger>
-            </TabsList>
+      <div className="w-full max-w-md">
+        {/* Logo & Title */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
+            <BarChart3 size={32} className="text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">美股智能分析</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            专业的美股技术分析与回测系统
+          </p>
+        </div>
 
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <label htmlFor="login-username" className="text-sm font-medium">
-                    用户名
-                  </label>
-                  <Input
-                    id="login-username"
-                    type="text"
-                    value={loginUsername}
-                    onChange={(e) => setLoginUsername(e.target.value)}
-                    placeholder="输入用户名"
-                    required
-                    disabled={loginMutation.isPending}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="login-password" className="text-sm font-medium">
-                    密码
-                  </label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="输入密码"
-                    required
-                    disabled={loginMutation.isPending}
-                  />
-                </div>
-                {error && <p className="text-sm text-destructive">{error}</p>}
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={loginMutation.isPending}
-                >
-                  {loginMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  登录
-                </Button>
-              </form>
-            </TabsContent>
+        {/* Login/Register Form */}
+        <div className="rounded-xl border border-border bg-card p-6 shadow-lg">
+          <h2 className="text-lg font-semibold mb-1">
+            {mode === 'login' ? '登录' : '注册'}
+          </h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            {mode === 'login' ? '输入用户名和密码登录系统' : '创建新账户开始使用'}
+          </p>
 
-            <TabsContent value="register">
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <label htmlFor="register-username" className="text-sm font-medium">
-                    用户名
-                  </label>
-                  <Input
-                    id="register-username"
-                    type="text"
-                    value={registerUsername}
-                    onChange={(e) => setRegisterUsername(e.target.value)}
-                    placeholder="3-20个字符"
-                    required
-                    minLength={3}
-                    maxLength={20}
-                    disabled={registerMutation.isPending}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="register-password" className="text-sm font-medium">
-                    密码
-                  </label>
-                  <Input
-                    id="register-password"
-                    type="password"
-                    value={registerPassword}
-                    onChange={(e) => setRegisterPassword(e.target.value)}
-                    placeholder="至少6个字符"
-                    required
-                    minLength={6}
-                    disabled={registerMutation.isPending}
-                  />
-                </div>
-                {error && <p className="text-sm text-destructive">{error}</p>}
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={registerMutation.isPending}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">用户名</label>
+              <div className="relative">
+                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="请输入用户名"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-input bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">密码</label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="请输入密码"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-input bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {registerMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  注册
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2">
+                <p className="text-sm text-red-500">{error}</p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={!username.trim() || !password.trim() || loading}
+            >
+              {loading ? '处理中...' : mode === 'login' ? '登录' : '注册'}
+            </Button>
+          </form>
+
+          <div className="mt-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              {mode === 'login' ? (
+                <>
+                  没有账户？{' '}
+                  <button
+                    onClick={() => { setMode('register'); setError(''); }}
+                    className="text-primary hover:underline font-medium"
+                  >
+                    注册
+                  </button>
+                </>
+              ) : (
+                <>
+                  已有账户？{' '}
+                  <button
+                    onClick={() => { setMode('login'); setError(''); }}
+                    className="text-primary hover:underline font-medium"
+                  >
+                    登录
+                  </button>
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+
+        <p className="text-xs text-center text-muted-foreground mt-6">
+          登录即表示您同意使用条款和隐私政策
+        </p>
+      </div>
     </div>
   );
 }
