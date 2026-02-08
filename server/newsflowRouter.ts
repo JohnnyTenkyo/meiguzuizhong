@@ -455,7 +455,7 @@ export const newsflowRouter = router({
         // 转换为统一的 NewsItem 格式
         const items = tweets.map((tweet) => ({
           title: tweet.text,
-          titleZh: tweet.text, // Twitter 推文暂不翻译，保持原文
+          titleZh: tweet.text, // 先设为原文，稍后翻译
           link: `https://x.com/${input.twitterHandle}/status/${tweet.id}`,
           pubDate: tweet.created_at,
           source: "X (Twitter)",
@@ -470,7 +470,15 @@ export const newsflowRouter = router({
           },
         }));
 
-        return items;
+        // 翻译所有推文
+        const translated = await Promise.all(
+          items.map(async (item) => {
+            const titleZh = await translateText(item.title);
+            return { ...item, titleZh };
+          })
+        );
+
+        return translated;
       } catch (err) {
         console.error("Error fetching Twitter timeline:", err);
         return [];
@@ -501,7 +509,7 @@ export const newsflowRouter = router({
         // 转换为统一的 NewsItem 格式
         const items = limited.map((tweet) => ({
           title: tweet.text,
-          titleZh: tweet.text,
+          titleZh: tweet.text, // 先设为原文，稍后翻译
           link: `https://x.com/${input.twitterHandle}/status/${tweet.id}`,
           pubDate: tweet.created_at,
           source: "X (Twitter)",
@@ -516,7 +524,15 @@ export const newsflowRouter = router({
           },
         }));
 
-        return items;
+        // 翻译所有推文
+        const translated = await Promise.all(
+          items.map(async (item) => {
+            const titleZh = await translateText(item.title);
+            return { ...item, titleZh };
+          })
+        );
+
+        return translated;
       } catch (err) {
         console.error("Error fetching original tweets:", err);
         return [];
@@ -539,7 +555,7 @@ export const newsflowRouter = router({
         
         const items = posts.map((post) => ({
           title: post.text,
-          titleZh: post.text,
+          titleZh: post.text, // 先设为原文，稍后翻译
           link: post.url,
           pubDate: post.created_at,
           source: "Truth Social",
@@ -551,7 +567,15 @@ export const newsflowRouter = router({
           },
         }));
 
-        return items;
+        // 翻译所有帖子
+        const translated = await Promise.all(
+          items.map(async (item) => {
+            const titleZh = await translateText(item.title);
+            return { ...item, titleZh };
+          })
+        );
+
+        return translated;
       } catch (err) {
         console.error("Error fetching Truth Social posts:", err);
         return [];
