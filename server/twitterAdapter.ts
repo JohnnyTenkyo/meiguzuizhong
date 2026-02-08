@@ -1,8 +1,11 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
+import { fileURLToPath } from "url";
 
 const execAsync = promisify(exec);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface TwitterUser {
   rest_id: string;
@@ -31,13 +34,14 @@ interface TwitterTweet {
 }
 
 const PYTHON_SCRIPT = path.join(__dirname, "twitter_api_helper.py");
+const PYTHON_CMD = process.env.PYTHON_PATH || "python3";
 
 /**
  * 获取 Twitter 用户信息
  */
 export async function getTwitterUserProfile(username: string): Promise<TwitterUser | null> {
   try {
-    const { stdout } = await execAsync(`python3 ${PYTHON_SCRIPT} get_profile ${username}`);
+    const { stdout } = await execAsync(`${PYTHON_CMD} ${PYTHON_SCRIPT} get_profile ${username}`);
     const result = JSON.parse(stdout);
     
     if (!result || result.error) {
@@ -60,7 +64,7 @@ export async function getTwitterTweetsByUsername(
   count: number = 20
 ): Promise<TwitterTweet[]> {
   try {
-    const { stdout } = await execAsync(`python3 ${PYTHON_SCRIPT} get_tweets ${username} ${count}`);
+    const { stdout } = await execAsync(`${PYTHON_CMD} ${PYTHON_SCRIPT} get_tweets ${username} ${count}`);
     const result = JSON.parse(stdout);
     
     if (!result || result.error) {

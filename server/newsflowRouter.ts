@@ -3,6 +3,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import https from "https";
 import http from "http";
 import { getTwitterTweetsByUsername } from "./twitterAdapter";
+import { getTruthSocialPosts, isTruthSocialConfigured } from "./truthSocialAdapter";
 
 // ============================================================
 // VIP 人物数据库 - 内置重要人物信息
@@ -29,6 +30,7 @@ const VIP_PEOPLE: VIPPerson[] = [
     titleZh: "美国总统",
     org: "White House",
     twitterHandle: "realDonaldTrump",
+    truthSocialHandle: "realDonaldTrump",
     category: "政治",
     avatarEmoji: "🏛️",
   },
@@ -475,6 +477,7 @@ export const newsflowRouter = router({
     .input(z.object({
       personName: z.string(),
       twitterHandle: z.string().optional(),
+      truthSocialHandle: z.string().optional(),
       limit: z.number().optional().default(15),
     }))
     .query(async ({ input }) => {
@@ -487,7 +490,25 @@ export const newsflowRouter = router({
         // 获取社交媒体相关
         let socialItems: NewsItem[] = [];
         
-        // 优先使用 Twitter API 获取实时推文
+        // 优先使用 Truth Social API （如果配置了）
+        if (input.truthSocialHandle && isTruthSocialConfigured()) {
+          try {
+            const posts = await getTruthSocialPosts(input.truthSocialHandle, 10);
+            const truthItems = posts.map((post) => ({
+              title: post.text,
+              titleZh: post.text,
+              link: post.url,
+              pubDate: post.created_at,
+              source: "Truth Social",
+              type: "social" as const,
+            }));
+            socialItems.push(...truthItems);
+          } catch (err) {
+            console.error("Error fetching Truth Social posts:", err);
+          }
+        }
+        
+        // 使用 Twitter API 获取实时推文
         if (input.twitterHandle) {
           try {
             const tweets = await getTwitterTweetsByUsername(input.twitterHandle, 10);
