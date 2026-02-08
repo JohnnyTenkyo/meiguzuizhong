@@ -134,9 +134,10 @@ export default function BacktestSimulator() {
   }, [positions, session, interval]);
 
   // Fetch position prices when positions or session date changes
+  // This ensures all positions use the same unified date for price calculation
   useEffect(() => {
     fetchPositionPrices();
-  }, [fetchPositionPrices]);
+  }, [positions, session?.currentDate, interval]); // Explicitly depend on session.currentDate
   const [allCandles, setAllCandles] = useState<Candle[]>([]);
   const [visibleIndex, setVisibleIndex] = useState(0);
   const [chartLoading, setChartLoading] = useState(false);
@@ -314,6 +315,7 @@ export default function BacktestSimulator() {
   }, [flushDateUpdate]);
 
   // Advance one candle - optimized for rapid clicking
+  // Find the next date that has data for all positions
   const advanceCandle = useCallback(() => {
     setVisibleIndex(prev => {
       if (prev < allCandles.length) {
@@ -323,6 +325,7 @@ export default function BacktestSimulator() {
           const newDate = new Date(newCandle.time);
           const dateNum = newDate.getFullYear() * 10000 + (newDate.getMonth() + 1) * 100 + newDate.getDate();
           if (dateNum !== session.currentDate) {
+            // Update to this date - fetchPositionPrices will use this unified date for all positions
             scheduleDateUpdate(dateNum);
           }
         }
@@ -333,6 +336,7 @@ export default function BacktestSimulator() {
   }, [allCandles, session, scheduleDateUpdate]);
 
   // Go back one candle
+  // Find the previous date that has data for all positions
   const retreatCandle = useCallback(() => {
     setVisibleIndex(prev => {
       if (prev > 1) {
@@ -342,6 +346,7 @@ export default function BacktestSimulator() {
           const prevDate = new Date(prevCandle.time);
           const dateNum = prevDate.getFullYear() * 10000 + (prevDate.getMonth() + 1) * 100 + prevDate.getDate();
           if (dateNum !== session.currentDate) {
+            // Update to this date - fetchPositionPrices will use this unified date for all positions
             scheduleDateUpdate(dateNum);
           }
         }
@@ -501,14 +506,15 @@ export default function BacktestSimulator() {
     );
   }
 
-  // Calculate total market value using real-time prices for all positions
+  // Calculate total market value using consistent price source for all positions
+  // Always use positionPrices (fetched at current simulation date) to ensure consistency
+  // This prevents market value from changing when switching between stocks or time intervals
   let totalMarketValue = 0;
   let unrealizedPnl = 0;
   for (const pos of positions) {
-    // Use current candle price for the symbol being viewed, otherwise use fetched price
-    const currentPrice = (pos.symbol === currentSymbol && currentCandle) 
-      ? currentCandle.close 
-      : (positionPrices[pos.symbol] || Number(pos.avgCost));
+    // Use the price from positionPrices (fetched at current simulation date)
+    // For the currently viewed symbol, also show it on the chart with currentCandle
+    const currentPrice = positionPrices[pos.symbol] || Number(pos.avgCost);
     
     const marketValue = currentPrice * pos.quantity;
     totalMarketValue += marketValue;

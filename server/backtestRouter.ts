@@ -3,7 +3,7 @@ import { getDb } from "./db";
 import { backtestSessions, backtestTrades, backtestPositions, localUsers } from "../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { verifyToken } from "./authRouter";
-import { fetchFinnhubQuote } from "./finnhubAdapter";
+import { fetchFinnhubCandles } from "./finnhubAdapter";
 
 export const backtestApiRouter = Router();
 
@@ -33,22 +33,40 @@ backtestApiRouter.get("/sessions", async (req: any, res) => {
       .where(eq(backtestSessions.localUserId, req.userId))
       .orderBy(desc(backtestSessions.updatedAt));
     
-    // 为每个 session 附带持仓总市值（使用实时价格），用于计算真实盈亏
+    // 为每个 session 附带持仓总市值（使用当前模拟日期的历史价格，而不是实时价格）
+    // 这确保存档列表显示的数据与回测模拟器内一致
     const sessionsWithPositions = await Promise.all(
       sessions.map(async (session) => {
         const positions = await db.select().from(backtestPositions)
           .where(eq(backtestPositions.sessionId, session.id));
         const activePositions = positions.filter(p => Number(p.quantity) > 0);
         
-        // 获取所有持仓股票的实时价格
+        // 获取所有持仓股票在当前模拟日期的历史价格
         let totalMarketValue = 0;
+        const cutoffTimestamp = new Date(
+          Math.floor(session.currentDate / 10000),
+          Math.floor((session.currentDate % 10000) / 100) - 1,
+          session.currentDate % 100
+        ).getTime();
+        
         await Promise.all(
           activePositions.map(async (pos) => {
             try {
-              const quote = await fetchFinnhubQuote(pos.symbol);
-              totalMarketValue += quote.price * Number(pos.quantity);
+              // 获取历史K线数据，找到当前模拟日期的价格
+              const candles = await fetchFinnhubCandles(pos.symbol, '1d');
+              let priceAtDate = Number(pos.avgCost); // 默认使用成本价
+              
+              // 找到当前模拟日期或之前最近的K线
+              for (let i = candles.length - 1; i >= 0; i--) {
+                if (candles[i].time <= cutoffTimestamp) {
+                  priceAtDate = candles[i].close;
+                  break;
+                }
+              }
+              
+              totalMarketValue += priceAtDate * Number(pos.quantity);
             } catch (err) {
-              console.error(`Failed to fetch price for ${pos.symbol}:`, err);
+              console.error(`Failed to fetch historical price for ${pos.symbol}:`, err);
               // 如果获取失败，使用成本价作为后备
               totalMarketValue += Number(pos.totalCost);
             }
