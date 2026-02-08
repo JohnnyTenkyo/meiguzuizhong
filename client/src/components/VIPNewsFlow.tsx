@@ -13,6 +13,7 @@ interface VIPPerson {
   category: string;
   avatarEmoji: string;
   twitterHandle?: string;
+  truthSocialHandle?: string;
   relatedTickers: string[];
 }
 
@@ -23,7 +24,17 @@ interface NewsItem {
   pubDate: string;
   source: string;
   type: "news" | "social";
+  isRetweet?: boolean;
+  isReply?: boolean;
+  engagement?: {
+    likes?: number;
+    retweets?: number;
+    replies?: number;
+    quotes?: number;
+  };
 }
+
+type ContentTab = "original" | "retweets" | "truthsocial" | "news";
 
 // ============================================================
 // 辅助函数
@@ -51,6 +62,10 @@ function timeAgo(dateStr: string): string {
 export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTickers?: string[] }) {
   const [vipList, setVipList] = useState<VIPPerson[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<VIPPerson | null>(null);
+  const [contentTab, setContentTab] = useState<ContentTab>("original");
+  const [originalTweets, setOriginalTweets] = useState<NewsItem[]>([]);
+  const [retweetsReplies, setRetweetsReplies] = useState<NewsItem[]>([]);
+  const [truthSocialPosts, setTruthSocialPosts] = useState<NewsItem[]>([]);
   const [newsFeed, setNewsFeed] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingVip, setLoadingVip] = useState(true);
@@ -88,37 +103,88 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
       .catch(console.error);
   }, [watchlistTickers]);
 
-  // 获取选中人物的新闻
-  const fetchPersonFeed = useCallback(async (person: { name: string; twitterHandle?: string }) => {
+  // 获取选中人物的内容
+  const fetchPersonContent = useCallback(async (person: VIPPerson) => {
     setLoading(true);
+    setOriginalTweets([]);
+    setRetweetsReplies([]);
+    setTruthSocialPosts([]);
     setNewsFeed([]);
+
     try {
-      const input = encodeURIComponent(
+      // 1. 获取原创推文
+      if (person.twitterHandle) {
+        const input1 = encodeURIComponent(
+          JSON.stringify({
+            json: {
+              twitterHandle: person.twitterHandle,
+              limit: 20,
+            }
+          })
+        );
+        const resp1 = await fetch(`/api/trpc/newsflow.getPersonOriginalTweets?input=${input1}`);
+        const data1 = await resp1.json();
+        const tweets = data1?.result?.data?.json || data1?.result?.data || [];
+        setOriginalTweets(Array.isArray(tweets) ? tweets : []);
+
+        // 2. 获取所有推文（用于分离转发和评论）
+        const input2 = encodeURIComponent(
+          JSON.stringify({
+            json: {
+              twitterHandle: person.twitterHandle,
+              limit: 40,
+            }
+          })
+        );
+        const resp2 = await fetch(`/api/trpc/newsflow.getPersonTwitter?input=${input2}`);
+        const data2 = await resp2.json();
+        const allTweets = data2?.result?.data?.json || data2?.result?.data || [];
+        const retweets = Array.isArray(allTweets) ? allTweets.filter((t: NewsItem) => t.isRetweet || t.isReply) : [];
+        setRetweetsReplies(retweets);
+      }
+
+      // 3. 获取 Truth Social 帖子
+      if (person.truthSocialHandle) {
+        const input3 = encodeURIComponent(
+          JSON.stringify({
+            json: {
+              truthSocialHandle: person.truthSocialHandle,
+              limit: 20,
+            }
+          })
+        );
+        const resp3 = await fetch(`/api/trpc/newsflow.getPersonTruthSocial?input=${input3}`);
+        const data3 = await resp3.json();
+        const posts = data3?.result?.data?.json || data3?.result?.data || [];
+        setTruthSocialPosts(Array.isArray(posts) ? posts : []);
+      }
+
+      // 4. 获取新闻
+      const input4 = encodeURIComponent(
         JSON.stringify({
           json: {
             personName: person.name,
-            twitterHandle: person.twitterHandle || "",
-            limit: 12,
+            limit: 15,
           }
         })
       );
-      const resp = await fetch(`/api/trpc/newsflow.getPersonFeed?input=${input}`);
-      const data = await resp.json();
-      const feed = data?.result?.data?.json || data?.result?.data || [];
-      setNewsFeed(Array.isArray(feed) ? feed : []);
+      const resp4 = await fetch(`/api/trpc/newsflow.getPersonNews?input=${input4}`);
+      const data4 = await resp4.json();
+      const news = data4?.result?.data?.json || data4?.result?.data || [];
+      setNewsFeed(Array.isArray(news) ? news : []);
     } catch (err) {
-      console.error("Error fetching feed:", err);
+      console.error("Error fetching content:", err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // 选中人物时加载新闻
+  // 选中人物时加载内容
   useEffect(() => {
     if (selectedPerson) {
-      fetchPersonFeed(selectedPerson);
+      fetchPersonContent(selectedPerson);
     }
-  }, [selectedPerson, fetchPersonFeed]);
+  }, [selectedPerson, fetchPersonContent]);
 
   const categories = ["全部", "政治", "科技", "金融", "商业"];
   const filteredVip = vipList.filter((p) => {
@@ -129,6 +195,24 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
     const matchCategory = categoryFilter === "全部" || p.category === categoryFilter;
     return matchSearch && matchCategory;
   });
+
+  // 根据当前标签页获取要显示的内容
+  const getCurrentContent = (): NewsItem[] => {
+    switch (contentTab) {
+      case "original":
+        return originalTweets;
+      case "retweets":
+        return retweetsReplies;
+      case "truthsocial":
+        return truthSocialPosts;
+      case "news":
+        return newsFeed;
+      default:
+        return [];
+    }
+  };
+
+  const currentContent = getCurrentContent();
 
   return (
     <section
@@ -442,7 +526,7 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
           )}
         </div>
 
-        {/* 右侧新闻流 */}
+        {/* 右侧内容流 */}
         <div className="vip-news-right" style={{ flex: 1, overflowY: "auto", maxHeight: 600, width: "100%" }}>
           {selectedPerson && (
             <>
@@ -469,27 +553,117 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
                         ({selectedPerson.title})
                       </span>
                     </div>
-                    {selectedPerson.twitterHandle && (
-                      <a
-                        href={`https://x.com/${selectedPerson.twitterHandle}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          fontSize: 12,
-                          color: "#3b82f6",
-                          textDecoration: "none",
-                          marginTop: 4,
-                          display: "inline-block",
-                        }}
-                      >
-                        @{selectedPerson.twitterHandle} on X
-                      </a>
-                    )}
+                    <div style={{ marginTop: 6, display: "flex", gap: 8 }}>
+                      {selectedPerson.twitterHandle && (
+                        <a
+                          href={`https://x.com/${selectedPerson.twitterHandle}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            fontSize: 12,
+                            color: "#3b82f6",
+                            textDecoration: "none",
+                          }}
+                        >
+                          @{selectedPerson.twitterHandle} on X
+                        </a>
+                      )}
+                      {selectedPerson.truthSocialHandle && (
+                        <a
+                          href={`https://truthsocial.com/@${selectedPerson.truthSocialHandle}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            fontSize: 12,
+                            color: "#ef4444",
+                            textDecoration: "none",
+                          }}
+                        >
+                          @{selectedPerson.truthSocialHandle} on Truth Social
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* 信息流列表 */}
+              {/* 内容分类标签页 */}
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid #2a3a4e", background: "rgba(15, 23, 42, 0.2)" }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {selectedPerson.twitterHandle && (
+                    <>
+                      <button
+                        onClick={() => setContentTab("original")}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: 8,
+                          border: "none",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          background: contentTab === "original" ? "#3b82f6" : "rgba(30,41,59,0.5)",
+                          color: contentTab === "original" ? "#fff" : "#94a3b8",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        💬 原创推文 {originalTweets.length > 0 && `(${originalTweets.length})`}
+                      </button>
+                      <button
+                        onClick={() => setContentTab("retweets")}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: 8,
+                          border: "none",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          background: contentTab === "retweets" ? "#3b82f6" : "rgba(30,41,59,0.5)",
+                          color: contentTab === "retweets" ? "#fff" : "#94a3b8",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        🔄 转发/评论 {retweetsReplies.length > 0 && `(${retweetsReplies.length})`}
+                      </button>
+                    </>
+                  )}
+                  {selectedPerson.truthSocialHandle && (
+                    <button
+                      onClick={() => setContentTab("truthsocial")}
+                      style={{
+                        padding: "6px 14px",
+                        borderRadius: 8,
+                        border: "none",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        background: contentTab === "truthsocial" ? "#ef4444" : "rgba(30,41,59,0.5)",
+                        color: contentTab === "truthsocial" ? "#fff" : "#94a3b8",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      🇺🇸 Truth Social {truthSocialPosts.length > 0 && `(${truthSocialPosts.length})`}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setContentTab("news")}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 8,
+                      border: "none",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      background: contentTab === "news" ? "#f59e0b" : "rgba(30,41,59,0.5)",
+                      color: contentTab === "news" ? "#fff" : "#94a3b8",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    📰 新闻报道 {newsFeed.length > 0 && `(${newsFeed.length})`}
+                  </button>
+                </div>
+              </div>
+
+              {/* 内容列表 */}
               <div style={{ padding: "12px 16px" }}>
                 {loading ? (
                   <div style={{ padding: 40, textAlign: "center" }}>
@@ -509,12 +683,12 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
                       正在获取 {selectedPerson.nameZh} 的最新动态...
                     </div>
                   </div>
-                ) : newsFeed.length === 0 ? (
+                ) : currentContent.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>
-                    暂无相关新闻
+                    暂无相关内容
                   </div>
                 ) : (
-                  newsFeed.map((item, idx) => (
+                  currentContent.map((item, idx) => (
                     <a
                       key={idx}
                       href={item.link}
@@ -557,14 +731,31 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
                               borderRadius: 8,
                               fontWeight: 600,
                               background:
-                                item.type === "social"
+                                item.source === "Truth Social"
+                                  ? "rgba(239, 68, 68, 0.15)"
+                                  : item.type === "social"
                                   ? "rgba(59, 130, 246, 0.15)"
                                   : "rgba(245, 158, 11, 0.15)",
-                              color: item.type === "social" ? "#3b82f6" : "#f59e0b",
+                              color: 
+                                item.source === "Truth Social"
+                                  ? "#ef4444"
+                                  : item.type === "social" 
+                                  ? "#3b82f6" 
+                                  : "#f59e0b",
                             }}
                           >
-                            {item.type === "social" ? "💬 言论/社交" : "📰 新闻"}
+                            {item.source === "Truth Social" 
+                              ? "🇺🇸 Truth Social" 
+                              : item.type === "social" 
+                              ? "💬 社交媒体" 
+                              : "📰 新闻"}
                           </span>
+                          {item.isRetweet && (
+                            <span style={{ fontSize: 10, color: "#64748b" }}>🔄 转发</span>
+                          )}
+                          {item.isReply && (
+                            <span style={{ fontSize: 10, color: "#64748b" }}>💬 回复</span>
+                          )}
                           <span style={{ fontSize: 11, color: "#64748b" }}>{item.source}</span>
                         </div>
                         <span style={{ fontSize: 11, color: "#475569" }}>
@@ -572,14 +763,14 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
                         </span>
                       </div>
 
-                      {/* 英文原文 */}
+                      {/* 内容文本 */}
                       <div
                         style={{
                           fontSize: 14,
                           fontWeight: 600,
                           color: "#e2e8f0",
                           lineHeight: 1.5,
-                          marginBottom: 6,
+                          marginBottom: item.titleZh && item.titleZh !== item.title ? 6 : 0,
                         }}
                       >
                         {item.title}
@@ -597,6 +788,24 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
                           }}
                         >
                           🇨🇳 {item.titleZh}
+                        </div>
+                      )}
+
+                      {/* 互动数据 */}
+                      {item.engagement && (
+                        <div style={{ marginTop: 8, display: "flex", gap: 12, fontSize: 11, color: "#64748b" }}>
+                          {item.engagement.likes !== undefined && item.engagement.likes > 0 && (
+                            <span>❤️ {item.engagement.likes.toLocaleString()}</span>
+                          )}
+                          {item.engagement.retweets !== undefined && item.engagement.retweets > 0 && (
+                            <span>🔄 {item.engagement.retweets.toLocaleString()}</span>
+                          )}
+                          {item.engagement.replies !== undefined && item.engagement.replies > 0 && (
+                            <span>💬 {item.engagement.replies.toLocaleString()}</span>
+                          )}
+                          {item.engagement.quotes !== undefined && item.engagement.quotes > 0 && (
+                            <span>💭 {item.engagement.quotes.toLocaleString()}</span>
+                          )}
                         </div>
                       )}
                     </a>

@@ -16,6 +16,7 @@ interface VIPPerson {
   titleZh: string;
   org: string;
   twitterHandle?: string;
+  truthSocialHandle?: string;
   category: "政治" | "科技" | "金融" | "商业";
   relatedTickers?: string[];
   avatarEmoji: string;
@@ -194,6 +195,61 @@ const VIP_PEOPLE: VIPPerson[] = [
     relatedTickers: ["AMD"],
     avatarEmoji: "⚡",
   },
+  {
+    id: "warsh",
+    name: "Kevin Warsh",
+    nameZh: "凯文·沃什",
+    title: "Federal Reserve Chair Nominee",
+    titleZh: "美联储主席提名者",
+    org: "Federal Reserve (Nominee)",
+    twitterHandle: "KevinWarsh",
+    truthSocialHandle: "KevinWarsh",
+    category: "金融",
+    avatarEmoji: "🏦",
+  },
+  {
+    id: "yellen",
+    name: "Janet Yellen",
+    nameZh: "珍妮特·耶伦",
+    title: "U.S. Secretary of the Treasury",
+    titleZh: "美国财政部长",
+    org: "U.S. Department of the Treasury",
+    category: "金融",
+    avatarEmoji: "💵",
+  },
+  {
+    id: "lagarde",
+    name: "Christine Lagarde",
+    nameZh: "克里斯蒂娜·拉加德",
+    title: "President of the European Central Bank",
+    titleZh: "欧洲央行行长",
+    org: "European Central Bank",
+    category: "金融",
+    avatarEmoji: "🇪🇺",
+  },
+  {
+    id: "dalio",
+    name: "Ray Dalio",
+    nameZh: "瑞·达利欧",
+    title: "Founder of Bridgewater Associates",
+    titleZh: "桥水基金创始人",
+    org: "Bridgewater Associates",
+    twitterHandle: "RayDalio",
+    category: "金融",
+    avatarEmoji: "📊",
+  },
+  {
+    id: "ackman",
+    name: "Bill Ackman",
+    nameZh: "比尔·阿克曼",
+    title: "CEO of Pershing Square Capital",
+    titleZh: "潘兴广场资本 CEO",
+    org: "Pershing Square Capital",
+    twitterHandle: "BillAckman",
+    category: "金融",
+    relatedTickers: ["PSH"],
+    avatarEmoji: "💼",
+  },
 ];
 
 // ============================================================
@@ -312,6 +368,7 @@ export const newsflowRouter = router({
       category: p.category,
       avatarEmoji: p.avatarEmoji,
       twitterHandle: p.twitterHandle,
+      truthSocialHandle: p.truthSocialHandle,
       relatedTickers: p.relatedTickers || [],
     }));
   }),
@@ -403,6 +460,8 @@ export const newsflowRouter = router({
           pubDate: tweet.created_at,
           source: "X (Twitter)",
           type: "social" as const,
+          isRetweet: tweet.is_retweet,
+          isReply: tweet.is_reply,
           engagement: {
             likes: tweet.favorite_count,
             retweets: tweet.retweet_count,
@@ -414,6 +473,87 @@ export const newsflowRouter = router({
         return items;
       } catch (err) {
         console.error("Error fetching Twitter timeline:", err);
+        return [];
+      }
+    }),
+
+  // 获取人物原创 Twitter 动态（过滤转发和评论）
+  getPersonOriginalTweets: publicProcedure
+    .input(z.object({
+      twitterHandle: z.string(),
+      limit: z.number().optional().default(20),
+    }))
+    .query(async ({ input }) => {
+      try {
+        if (!input.twitterHandle) {
+          return [];
+        }
+
+        // 获取所有推文
+        const tweets = await getTwitterTweetsByUsername(input.twitterHandle, input.limit * 2);
+        
+        // 过滤出原创推文（非转发且非评论）
+        const originalTweets = tweets.filter(tweet => !tweet.is_retweet && !tweet.is_reply);
+        
+        // 限制数量
+        const limited = originalTweets.slice(0, input.limit);
+        
+        // 转换为统一的 NewsItem 格式
+        const items = limited.map((tweet) => ({
+          title: tweet.text,
+          titleZh: tweet.text,
+          link: `https://x.com/${input.twitterHandle}/status/${tweet.id}`,
+          pubDate: tweet.created_at,
+          source: "X (Twitter)",
+          type: "social" as const,
+          isRetweet: false,
+          isReply: false,
+          engagement: {
+            likes: tweet.favorite_count,
+            retweets: tweet.retweet_count,
+            replies: tweet.reply_count,
+            quotes: tweet.quote_count,
+          },
+        }));
+
+        return items;
+      } catch (err) {
+        console.error("Error fetching original tweets:", err);
+        return [];
+      }
+    }),
+
+  // 获取人物 Truth Social 动态
+  getPersonTruthSocial: publicProcedure
+    .input(z.object({
+      truthSocialHandle: z.string(),
+      limit: z.number().optional().default(20),
+    }))
+    .query(async ({ input }) => {
+      try {
+        if (!input.truthSocialHandle || !isTruthSocialConfigured()) {
+          return [];
+        }
+
+        const posts = await getTruthSocialPosts(input.truthSocialHandle, input.limit);
+        
+        const items = posts.map((post) => ({
+          title: post.text,
+          titleZh: post.text,
+          link: post.url,
+          pubDate: post.created_at,
+          source: "Truth Social",
+          type: "social" as const,
+          engagement: {
+            likes: post.favourites_count || 0,
+            retweets: post.reblogs_count || 0,
+            replies: post.replies_count || 0,
+          },
+        }));
+
+        return items;
+      } catch (err) {
+        console.error("Error fetching Truth Social posts:", err);
         return [];
       }
     }),
