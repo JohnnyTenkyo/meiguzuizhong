@@ -204,14 +204,31 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
         </div>
       </div>
 
-      <div style={{ display: "flex", minHeight: 500 }}>
+      <div style={{ display: "flex", minHeight: 500, flexDirection: "column" }} className="vip-news-container">
+        <style>{`
+          @media (min-width: 768px) {
+            .vip-news-container {
+              flex-direction: row !important;
+            }
+            .vip-news-left {
+              width: 280px !important;
+              border-right: 1px solid #2a3a4e !important;
+              border-bottom: none !important;
+              max-height: 600px !important;
+            }
+            .vip-news-right {
+              border-left: none !important;
+            }
+          }
+        `}</style>
         {/* 左侧人物列表 */}
         <div
+          className="vip-news-left"
           style={{
-            width: 280,
-            borderRight: "1px solid #2a3a4e",
+            width: "100%",
+            borderBottom: "1px solid #2a3a4e",
             overflowY: "auto",
-            maxHeight: 600,
+            maxHeight: 300,
             flexShrink: 0,
           }}
         >
@@ -425,8 +442,8 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
           )}
         </div>
 
-        {/* 右侧信息流 */}
-        <div style={{ flex: 1, overflowY: "auto", maxHeight: 600 }}>
+        {/* 右侧新闻流 */}
+        <div className="vip-news-right" style={{ flex: 1, overflowY: "auto", maxHeight: 600, width: "100%" }}>
           {selectedPerson && (
             <>
               {/* 人物信息头 */}
