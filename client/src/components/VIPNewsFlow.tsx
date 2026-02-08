@@ -576,6 +576,99 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
               )}
             </>
           )}
+
+          {activeTab === "custom" && (
+            <>
+              {/* 添加按钮 */}
+              <div style={{ padding: 12 }}>
+                <button
+                  onClick={() => setShowAddDialog(true)}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    borderRadius: 8,
+                    border: "2px dashed #3b82f6",
+                    background: "rgba(59, 130, 246, 0.05)",
+                    color: "#3b82f6",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>➕</span>
+                  添加追踪人物
+                </button>
+              </div>
+              {/* 自定义人物列表 */}
+              {customPeople.length === 0 ? (
+                <div style={{ padding: 20, textAlign: "center", color: "#64748b", fontSize: 13 }}>
+                  <div style={{ fontSize: 32, marginBottom: 10 }}>👤</div>
+                  <div>暂无自定义追踪人物</div>
+                  <div>点击上方按钮添加</div>
+                </div>
+              ) : (
+                customPeople.map((person) => (
+                  <div
+                    key={person.id}
+                    onClick={() => setSelectedPerson(person)}
+                    style={{
+                      padding: "10px 12px",
+                      cursor: "pointer",
+                      borderBottom: "1px solid rgba(42,58,78,0.3)",
+                      background:
+                        selectedPerson?.id === person.id
+                          ? "rgba(59, 130, 246, 0.1)"
+                          : "transparent",
+                      borderLeft:
+                        selectedPerson?.id === person.id
+                          ? "3px solid #3b82f6"
+                          : "3px solid transparent",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 22 }}>{person.avatarEmoji}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>
+                          {person.nameZh}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#64748b" }}>{person.titleZh}</div>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          padding: "2px 6px",
+                          borderRadius: 8,
+                          background:
+                            person.category === "政治"
+                              ? "rgba(239,68,68,0.15)"
+                              : person.category === "科技"
+                              ? "rgba(59,130,246,0.15)"
+                              : person.category === "金融"
+                              ? "rgba(245,158,11,0.15)"
+                              : "rgba(139,92,246,0.15)",
+                          color:
+                            person.category === "政治"
+                              ? "#ef4444"
+                              : person.category === "科技"
+                              ? "#3b82f6"
+                              : person.category === "金融"
+                              ? "#f59e0b"
+                              : "#8b5cf6",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {person.category}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </>
+          )}
         </div>
 
         {/* 右侧内容流 */}
@@ -868,6 +961,326 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
           )}
         </div>
       </div>
+
+      {/* 添加人物对话框 */}
+      {showAddDialog && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setShowAddDialog(false)}
+        >
+          <div
+            style={{
+              background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+              borderRadius: 16,
+              border: "1px solid #2a3a4e",
+              padding: 24,
+              maxWidth: 500,
+              width: "90%",
+              maxHeight: "80vh",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <h3 style={{ margin: 0, color: "#e2e8f0", fontSize: 18 }}>➕ 添加追踪人物</h3>
+              <button
+                onClick={() => setShowAddDialog(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#94a3b8",
+                  fontSize: 24,
+                  cursor: "pointer",
+                  padding: 0,
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>
+                  姓名（英文）*
+                </label>
+                <input
+                  type="text"
+                  value={newPerson.name}
+                  onChange={(e) => setNewPerson({ ...newPerson, name: e.target.value })}
+                  placeholder="e.g., Jerome Powell"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #2a3a4e",
+                    background: "rgba(30, 41, 59, 0.5)",
+                    color: "#e2e8f0",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>
+                  姓名（中文）
+                </label>
+                <input
+                  type="text"
+                  value={newPerson.nameZh}
+                  onChange={(e) => setNewPerson({ ...newPerson, nameZh: e.target.value })}
+                  placeholder="e.g., 杰罗姆·鲍威尔"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #2a3a4e",
+                    background: "rgba(30, 41, 59, 0.5)",
+                    color: "#e2e8f0",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>
+                  职位（英文）
+                </label>
+                <input
+                  type="text"
+                  value={newPerson.title}
+                  onChange={(e) => setNewPerson({ ...newPerson, title: e.target.value })}
+                  placeholder="e.g., Chair of the Federal Reserve"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #2a3a4e",
+                    background: "rgba(30, 41, 59, 0.5)",
+                    color: "#e2e8f0",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>
+                  职位（中文）
+                </label>
+                <input
+                  type="text"
+                  value={newPerson.titleZh}
+                  onChange={(e) => setNewPerson({ ...newPerson, titleZh: e.target.value })}
+                  placeholder="e.g., 美联储主席"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #2a3a4e",
+                    background: "rgba(30, 41, 59, 0.5)",
+                    color: "#e2e8f0",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>
+                  Twitter 账号
+                </label>
+                <input
+                  type="text"
+                  value={newPerson.twitterHandle}
+                  onChange={(e) => setNewPerson({ ...newPerson, twitterHandle: e.target.value })}
+                  placeholder="e.g., federalreserve"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #2a3a4e",
+                    background: "rgba(30, 41, 59, 0.5)",
+                    color: "#e2e8f0",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>
+                  Truth Social 账号
+                </label>
+                <input
+                  type="text"
+                  value={newPerson.truthSocialHandle}
+                  onChange={(e) => setNewPerson({ ...newPerson, truthSocialHandle: e.target.value })}
+                  placeholder="e.g., realDonaldTrump"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #2a3a4e",
+                    background: "rgba(30, 41, 59, 0.5)",
+                    color: "#e2e8f0",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>
+                  分类
+                </label>
+                <select
+                  value={newPerson.category}
+                  onChange={(e) => setNewPerson({ ...newPerson, category: e.target.value as any })}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #2a3a4e",
+                    background: "rgba(30, 41, 59, 0.5)",
+                    color: "#e2e8f0",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                >
+                  <option value="政治">政治</option>
+                  <option value="科技">科技</option>
+                  <option value="金融">金融</option>
+                  <option value="商业">商业</option>
+                  <option value="其他">其他</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 6 }}>
+                  Emoji 头像
+                </label>
+                <input
+                  type="text"
+                  value={newPerson.avatarEmoji}
+                  onChange={(e) => setNewPerson({ ...newPerson, avatarEmoji: e.target.value })}
+                  placeholder="e.g., 🏬"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #2a3a4e",
+                    background: "rgba(30, 41, 59, 0.5)",
+                    color: "#e2e8f0",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                <button
+                  onClick={() => {
+                    if (!newPerson.name) {
+                      alert("请输入姓名（英文）");
+                      return;
+                    }
+                    fetch("/api/trpc/newsflow.addTrackedPerson", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ json: newPerson }),
+                    })
+                      .then((r) => r.json())
+                      .then(() => {
+                        setShowAddDialog(false);
+                        setNewPerson({
+                          name: "",
+                          nameZh: "",
+                          title: "",
+                          titleZh: "",
+                          twitterHandle: "",
+                          truthSocialHandle: "",
+                          category: "其他",
+                          avatarEmoji: "👤",
+                        });
+                        // 重新加载自定义人物列表
+                        fetch("/api/trpc/newsflow.getTrackedPeople")
+                          .then((r) => r.json())
+                          .then((data) => {
+                            const list = data?.result?.data?.json || data?.result?.data || [];
+                            const formattedList = Array.isArray(list) ? list.map((p: any) => ({
+                              id: `custom_${p.id}`,
+                              name: p.name,
+                              nameZh: p.nameZh || p.name,
+                              title: p.title || "",
+                              titleZh: p.titleZh || p.title || "",
+                              org: "",
+                              category: p.category,
+                              avatarEmoji: p.avatarEmoji || "👤",
+                              twitterHandle: p.twitterHandle,
+                              truthSocialHandle: p.truthSocialHandle,
+                              relatedTickers: [],
+                              dbId: p.id,
+                            })) : [];
+                            setCustomPeople(formattedList);
+                          });
+                      })
+                      .catch((err) => {
+                        console.error(err);
+                        alert("添加失败，请重试");
+                      });
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    borderRadius: 8,
+                    border: "none",
+                    background: "#3b82f6",
+                    color: "#fff",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  添加
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddDialog(false);
+                    setNewPerson({
+                      name: "",
+                      nameZh: "",
+                      title: "",
+                      titleZh: "",
+                      twitterHandle: "",
+                      truthSocialHandle: "",
+                      category: "其他",
+                      avatarEmoji: "👤",
+                    });
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    borderRadius: 8,
+                    border: "1px solid #2a3a4e",
+                    background: "transparent",
+                    color: "#94a3b8",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
