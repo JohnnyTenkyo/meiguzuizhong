@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `tracked_people` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`name` varchar(128) NOT NULL,\n\t`nameZh` varchar(128),\n\t`title` varchar(256),\n\t`titleZh` varchar(256),\n\t`twitterHandle` varchar(64),\n\t`truthSocialHandle` varchar(64),\n\t`category` enum('政治','科技','金融','商业','其他') NOT NULL DEFAULT '其他',\n\t`avatarEmoji` varchar(10) DEFAULT '👤',\n\t`addedAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `tracked_people_id` PRIMARY KEY(`id`)\n);\nALTER TABLE `tracked_people` ADD CONSTRAINT `tracked_people_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2fpGxeuC2GaQSuR.root --database 4YohympKQYdBjSaKYrmXM5 --execute CREATE TABLE `tracked_people` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`name` varchar(128) NOT NULL,\n\t`nameZh` varchar(128),\n\t`title` varchar(256),\n\t`titleZh` varchar(256),\n\t`twitterHandle` varchar(64),\n\t`truthSocialHandle` varchar(64),\n\t`category` enum('政治','科技','金融','商业','其他') NOT NULL DEFAULT '其他',\n\t`avatarEmoji` varchar(10) DEFAULT '👤',\n\t`addedAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `tracked_people_id` PRIMARY KEY(`id`)\n);\nALTER TABLE `tracked_people` ADD CONSTRAINT `tracked_people_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 4052
+}
