@@ -33,48 +33,17 @@ backtestApiRouter.get("/sessions", async (req: any, res) => {
       .where(eq(backtestSessions.localUserId, req.userId))
       .orderBy(desc(backtestSessions.updatedAt));
     
-    // 为每个 session 附带持仓总市值（使用当前模拟日期的历史价格，而不是实时价格）
-    // 这确保存档列表显示的数据与回测模拟器内一致
+    // 为每个 session 附带持仓股票数量
+    // 注意：不在后端计算 totalMarketValue，因为价格计算可能与前端不一致
+    // 前端应该根据需要调用回测模拟器 API 获取实时市值
     const sessionsWithPositions = await Promise.all(
       sessions.map(async (session) => {
         const positions = await db.select().from(backtestPositions)
           .where(eq(backtestPositions.sessionId, session.id));
         const activePositions = positions.filter(p => Number(p.quantity) > 0);
         
-        // 获取所有持仓股票在当前模拟日期的历史价格
-        let totalMarketValue = 0;
-        const cutoffTimestamp = new Date(
-          Math.floor(session.currentDate / 10000),
-          Math.floor((session.currentDate % 10000) / 100) - 1,
-          session.currentDate % 100
-        ).getTime();
-        
-        // 串行获取价格以避免 API 限流
-        for (const pos of activePositions) {
-          try {
-            // 获取历史K线数据，找到当前模拟日期的价格
-            const candles = await fetchFinnhubCandles(pos.symbol, '1d');
-            let priceAtDate = Number(pos.avgCost); // 默认使用成本价
-            
-            // 找到当前模拟日期或之前最近的K线
-            for (let i = candles.length - 1; i >= 0; i--) {
-              if (candles[i].time <= cutoffTimestamp) {
-                priceAtDate = candles[i].close;
-                break;
-              }
-            }
-            
-            totalMarketValue += priceAtDate * Number(pos.quantity);
-          } catch (err) {
-            console.error(`Failed to fetch historical price for ${pos.symbol}:`, err);
-            // 如果获取失败，使用成本价作为后备
-            totalMarketValue += Number(pos.avgCost) * Number(pos.quantity);
-          }
-        }
-        
         return {
           ...session,
-          totalMarketValue: totalMarketValue.toFixed(2),
           positionCount: activePositions.length,
         };
       })
@@ -119,7 +88,7 @@ backtestApiRouter.post("/sessions", async (req: any, res) => {
   }
 });
 
-// Get a specific session with positions
+// Get a specific session with positions and calculate market value
 backtestApiRouter.get("/sessions/:id", async (req: any, res) => {
   try {
     const db = await getDb();
@@ -133,6 +102,7 @@ backtestApiRouter.get("/sessions/:id", async (req: any, res) => {
       return res.json({ success: false, error: "存档不存在" });
     }
     
+    const session = sessions[0];
     const positions = await db.select().from(backtestPositions)
       .where(eq(backtestPositions.sessionId, sessionId));
     
@@ -140,10 +110,70 @@ backtestApiRouter.get("/sessions/:id", async (req: any, res) => {
       .where(eq(backtestTrades.sessionId, sessionId))
       .orderBy(desc(backtestTrades.createdAt));
     
+    // 计算持仓总市值
+    let totalMarketValue: number | null = 0;
+    const activePositions = positions.filter(p => Number(p.quantity) > 0);
+    
+    const cutoffTimestamp = new Date(
+      Math.floor(session.currentDate / 10000),
+      Math.floor((session.currentDate % 10000) / 100) - 1,
+      session.currentDate % 100
+    ).getTime();
+    
+    console.log(`[Backtest] Calculating totalMarketValue for session ${sessionId}, currentDate: ${session.currentDate}, cutoffTimestamp: ${cutoffTimestamp}`);
+    
+    let hasError = false;
+    for (const pos of activePositions) {
+      try {
+        const candles = await fetchFinnhubCandles(pos.symbol, '1d');
+        if (!candles || candles.length === 0) {
+          console.error(`[Backtest] ${pos.symbol}: No candles returned from API`);
+          hasError = true;
+          break;
+        }
+        
+        let priceAtDate = Number(pos.avgCost);
+        let closestCandle = null;
+        let minDiff = Infinity;
+        
+        // 找到最接近 cutoffTimestamp 的 K 线
+        for (const candle of candles) {
+          const diff = Math.abs(candle.time - cutoffTimestamp);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestCandle = candle;
+          }
+        }
+        
+        if (closestCandle) {
+          priceAtDate = closestCandle.close;
+          console.log(`[Backtest] ${pos.symbol}: closestCandle.time=${new Date(closestCandle.time).toISOString()}, close=${closestCandle.close}, quantity=${pos.quantity}`);
+        } else {
+          console.log(`[Backtest] ${pos.symbol}: No candle found`);
+          hasError = true;
+          break;
+        }
+        
+        totalMarketValue += priceAtDate * Number(pos.quantity);
+      } catch (err) {
+        console.error(`Failed to fetch historical price for ${pos.symbol}:`, err);
+        hasError = true;
+        break;
+      }
+    }
+    
+    // 如果有错误，返回 null 而不是使用成本价
+    if (hasError) {
+      totalMarketValue = null;
+    }
+    
     return res.json({
       success: true,
-      session: sessions[0],
-      positions: positions.filter(p => Number(p.quantity) > 0),
+      session: {
+        ...session,
+        totalMarketValue: totalMarketValue !== null ? totalMarketValue.toFixed(2) : null,
+      },
+      positions: activePositions,
       trades,
     });
   } catch (err) {
@@ -152,18 +182,21 @@ backtestApiRouter.get("/sessions/:id", async (req: any, res) => {
   }
 });
 
-// Update session (advance date, change interval)
+// Update session (advance date, change interval, update total assets)
 backtestApiRouter.patch("/sessions/:id", async (req: any, res) => {
   try {
     const db = await getDb();
     if (!db) return res.json({ success: false, error: "数据库不可用" });
     
     const sessionId = parseInt(req.params.id);
-    const { currentDate, currentInterval } = req.body;
+    const { currentDate, currentInterval, totalAssets, totalPnL, totalPnLPercent } = req.body;
     
     const updateData: any = {};
     if (currentDate !== undefined) updateData.currentDate = Number(currentDate);
     if (currentInterval !== undefined) updateData.currentInterval = currentInterval;
+    if (totalAssets !== undefined) updateData.totalAssets = String(totalAssets);
+    if (totalPnL !== undefined) updateData.totalPnL = String(totalPnL);
+    if (totalPnLPercent !== undefined) updateData.totalPnLPercent = String(totalPnLPercent);
     
     await db.update(backtestSessions)
       .set(updateData)

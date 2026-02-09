@@ -14,7 +14,9 @@ interface BacktestSession {
   status: string;
   createdAt: string;
   updatedAt: string;
-  totalMarketValue?: string;  // 持仓总市值（后端新增字段）
+  totalAssets?: string;         // 总资产（数据库字段）
+  totalPnL?: string;            // 总盈亏金额（数据库字段）
+  totalPnLPercent?: string;     // 总盈亏百分比（数据库字段）
   positionCount?: number;       // 持仓股票数量（后端新增字段）
 }
 
@@ -51,6 +53,8 @@ export default function Backtest() {
       const res = await fetch('/api/backtest/sessions', { headers: getAuthHeaders() });
       const data = await res.json();
       if (data.success) {
+        // 直接使用数据库中的 totalAssets, totalPnL, totalPnLPercent
+        // 不再调用详细 API 重新计算
         setSessions(data.sessions);
       }
     } catch (err) {
@@ -202,12 +206,13 @@ export default function Backtest() {
               我的存档 ({sessions.length})
             </h2>
             {sessions.map(session => {
-              // 总资产 = 当前现金余额 + 持仓股票实时市值
-              const positionValue = Number(session.totalMarketValue || 0);
-              const totalAssets = Number(session.currentBalance) + positionValue;
-              const totalPnl = totalAssets - Number(session.initialBalance);
-              const totalPnlPercent = (totalPnl / Number(session.initialBalance)) * 100;
+              // 直接使用数据库中缓存的总资产和盈亏数据
+              const totalAssets = session.totalAssets ? Number(session.totalAssets) : Number(session.currentBalance);
+              const totalPnl = session.totalPnL ? Number(session.totalPnL) : 0;
+              const totalPnlPercent = session.totalPnLPercent ? Number(session.totalPnLPercent) : 0;
               const posCount = session.positionCount || 0;
+              const positionValue = totalAssets - Number(session.currentBalance);
+              const hasMarketValue = session.totalAssets !== null && session.totalAssets !== undefined;
               
               return (
                 <div
@@ -256,22 +261,31 @@ export default function Backtest() {
 
                   {/* 总资产和盈亏 */}
                   <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp size={14} className="text-muted-foreground" />
-                      <div>
-                        <span className="text-xs text-muted-foreground">总资产: </span>
-                        <span className="text-sm font-bold">${totalAssets.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                        <span className="text-xs text-muted-foreground ml-2">(初始: ${Number(session.initialBalance).toLocaleString()})</span>
+                    {hasMarketValue ? (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <TrendingUp size={14} className="text-muted-foreground" />
+                          <div>
+                            <span className="text-xs text-muted-foreground">总资产: </span>
+                            <span className="text-sm font-bold">${totalAssets.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                            <span className="text-xs text-muted-foreground ml-2">(初始: ${Number(session.initialBalance).toLocaleString()})</span>
+                          </div>
+                        </div>
+                        <div>
+                          <div className={`text-sm font-bold ${totalPnl >= 0 ? 'text-red-500' : 'text-green-500'}`}>
+                            {totalPnl >= 0 ? '+' : ''}{totalPnlPercent.toFixed(2)}%
+                            <span className="text-xs ml-1">
+                              ({totalPnl >= 0 ? '+' : ''}${totalPnl.toLocaleString(undefined, { maximumFractionDigits: 0 })})
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <TrendingUp size={14} />
+                        <span className="text-xs">点击进入查看详细盈亏数据</span>
                       </div>
-                    </div>
-                    <div>
-                      <div className={`text-sm font-bold ${totalPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {totalPnl >= 0 ? '+' : ''}{totalPnlPercent.toFixed(2)}%
-                        <span className="text-xs ml-1">
-                          ({totalPnl >= 0 ? '+' : ''}${totalPnl.toLocaleString(undefined, { maximumFractionDigits: 0 })})
-                        </span>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               );

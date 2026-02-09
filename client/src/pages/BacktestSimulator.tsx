@@ -131,7 +131,28 @@ export default function BacktestSimulator() {
     );
     
     setPositionPrices(priceMap);
-  }, [positions, session, interval]);
+    
+    // Calculate total assets and update database
+    let totalMarketValue = 0;
+    for (const pos of positions) {
+      const currentPrice = priceMap[pos.symbol] || Number(pos.avgCost);
+      totalMarketValue += currentPrice * pos.quantity;
+    }
+    const totalAssets = Number(session.currentBalance) + totalMarketValue;
+    const totalPnL = totalAssets - Number(session.initialBalance);
+    const totalPnLPercent = (totalPnL / Number(session.initialBalance)) * 100;
+    
+    // Update database with calculated values
+    fetch(`/api/backtest/sessions/${sessionId}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        totalAssets: totalAssets.toFixed(2),
+        totalPnL: totalPnL.toFixed(2),
+        totalPnLPercent: totalPnLPercent.toFixed(4),
+      }),
+    }).catch(err => console.error('Failed to update total assets:', err));
+  }, [positions, session, interval, sessionId]);
 
   // Fetch position prices when positions or session date changes
   // This ensures all positions use the same unified date for price calculation

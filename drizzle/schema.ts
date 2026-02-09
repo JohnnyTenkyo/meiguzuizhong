@@ -56,6 +56,12 @@ export const backtestSessions = mysqlTable("backtest_sessions", {
   name: varchar("name", { length: 128 }).notNull(),
   initialBalance: decimal("initialBalance", { precision: 16, scale: 2 }).notNull(),
   currentBalance: decimal("currentBalance", { precision: 16, scale: 2 }).notNull(),
+  /** Total assets (cash + position market value) */
+  totalAssets: decimal("totalAssets", { precision: 16, scale: 2 }),
+  /** Total profit/loss amount */
+  totalPnL: decimal("totalPnL", { precision: 16, scale: 2 }),
+  /** Total profit/loss percentage */
+  totalPnLPercent: decimal("totalPnLPercent", { precision: 10, scale: 4 }),
   /** The simulation start date (YYYYMMDD as bigint for easy comparison) */
   startDate: bigint("startDate", { mode: "number" }).notNull(),
   /** The current simulation date the user has advanced to */
