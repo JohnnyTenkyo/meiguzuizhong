@@ -4,6 +4,7 @@ import https from "https";
 import http from "http";
 import { getTwitterTweetsByUsername } from "./twitterAdapter";
 import { getTruthSocialPosts, isTruthSocialConfigured } from "./truthSocialAdapter";
+// AI 摘要功能已移除（确保网站完全免费）
 import { getDb } from "./db";
 import { trackedPeople } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
@@ -888,4 +889,10 @@ export const newsflowRouter = router({
         );
       return { success: true };
     }),
+
+  // ============================================================
+  // AI 智能摘要 API
+  // ============================================================
+
+  // AI 摘要功能已移除（确保网站完全免费）
 });

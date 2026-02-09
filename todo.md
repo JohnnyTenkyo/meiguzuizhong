@@ -186,3 +186,15 @@
 - [x] 为自选关联人物信息流添加推文/评论转发板块
 - [x] 修复 Truth Social 显示问题，验证 token 配置（Truth Social API 被 Cloudflare 拦截）
 - [x] 测试验证两个功能正常工作
+
+## 重要信息流高级功能（用户新需求）
+- [x] 搭建 Truth Social 反向代理服务绕过 Cloudflare 限制（优化请求头）
+- [x] 实现 AI 智能摘要功能（每日/每周摘要）
+- [x] 为每个重要人物生成关键观点和市场影响摘要
+- [x] 测试验证两个功能正常工作
+
+## 移除 AI 智能摘要功能（确保网站完全免费）
+- [x] 移除 AI 摘要后端服务（aiSummaryService.ts）
+- [x] 移除 AI 摘要 API 端点（newsflowRouter.ts）
+- [x] 移除前端 AI 摘要 UI（VIPNewsFlow.tsx）
+- [x] 测试验证移除后功能正常

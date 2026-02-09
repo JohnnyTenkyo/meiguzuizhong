@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { trpc } from "@/lib/trpc";
 
 // ============================================================
 // 类型定义
@@ -67,6 +68,7 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
   const [retweetsReplies, setRetweetsReplies] = useState<NewsItem[]>([]);
   const [truthSocialPosts, setTruthSocialPosts] = useState<NewsItem[]>([]);
   const [newsFeed, setNewsFeed] = useState<NewsItem[]>([]);
+  // AI 摘要功能已移除（确保网站完全免费）
   const [loading, setLoading] = useState(false);
   const [loadingVip, setLoadingVip] = useState(true);
   const [activeTab, setActiveTab] = useState<"vip" | "watchlist" | "custom">("vip");
@@ -244,10 +246,13 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
         return truthSocialPosts;
       case "news":
         return newsFeed;
+
       default:
         return [];
     }
   };
+
+  // AI 摘要功能已移除（确保网站完全免费）
 
   const currentContent = getCurrentContent();
 
@@ -791,6 +796,7 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
                       🇺🇸 Truth Social {truthSocialPosts.length > 0 && `(${truthSocialPosts.length})`}
                     </button>
                   )}
+                  {/* AI 摘要功能已移除（确保网站完全免费） */}
                   <button
                     onClick={() => setContentTab("news")}
                     style={{
