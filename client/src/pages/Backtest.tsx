@@ -265,7 +265,7 @@ export default function Backtest() {
                       </div>
                     </div>
                     <div>
-                      <div className={`text-sm font-bold ${totalPnl >= 0 ? 'text-red-500' : 'text-green-500'}`}>
+                      <div className={`text-sm font-bold ${totalPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                         {totalPnl >= 0 ? '+' : ''}{totalPnlPercent.toFixed(2)}%
                         <span className="text-xs ml-1">
                           ({totalPnl >= 0 ? '+' : ''}${totalPnl.toLocaleString(undefined, { maximumFractionDigits: 0 })})
