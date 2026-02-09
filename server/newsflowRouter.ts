@@ -269,7 +269,7 @@ VIP_PEOPLE.forEach((p) => {
 });
 
 // 额外补充一些常见股票的关键人物
-const EXTRA_TICKER_MAP: Record<string, { name: string; nameZh: string; title: string; titleZh: string; twitterHandle?: string; avatarEmoji: string }[]> = {
+const EXTRA_TICKER_MAP: Record<string, { name: string; nameZh: string; title: string; titleZh: string; twitterHandle?: string; truthSocialHandle?: string; avatarEmoji: string }[]> = {
   "OPEN": [{ name: "Kaz Nejatian", nameZh: "卡兹·内贾蒂安", title: "CEO of Opendoor Technologies", titleZh: "Opendoor Technologies CEO", twitterHandle: "nejatian", avatarEmoji: "🏠" }],
   "PLTR": [{ name: "Alex Karp", nameZh: "亚历克斯·卡普", title: "CEO of Palantir Technologies", titleZh: "Palantir Technologies CEO", avatarEmoji: "🔮" }],
   "CRM": [{ name: "Marc Benioff", nameZh: "马克·贝尼奥夫", title: "CEO of Salesforce", titleZh: "Salesforce CEO", twitterHandle: "Benioff", avatarEmoji: "☁️" }],
@@ -756,7 +756,7 @@ export const newsflowRouter = router({
       limit: z.number().optional().default(20),
     }))
     .query(async ({ input }) => {
-      const personSet = new Map<string, { name: string; nameZh: string; title: string; titleZh: string; avatarEmoji: string; ticker: string }>();
+      const personSet = new Map<string, { name: string; nameZh: string; title: string; titleZh: string; avatarEmoji: string; ticker: string; twitterHandle?: string; truthSocialHandle?: string }>();
 
       for (const ticker of input.tickers) {
         const t = ticker.toUpperCase();
@@ -772,6 +772,8 @@ export const newsflowRouter = router({
               titleZh: p.titleZh,
               avatarEmoji: p.avatarEmoji,
               ticker: t,
+              twitterHandle: p.twitterHandle,
+              truthSocialHandle: p.truthSocialHandle,
             });
           }
         }
@@ -786,6 +788,8 @@ export const newsflowRouter = router({
               titleZh: e.titleZh,
               avatarEmoji: e.avatarEmoji,
               ticker: t,
+              twitterHandle: e.twitterHandle,
+              truthSocialHandle: e.truthSocialHandle,
             });
           }
         }

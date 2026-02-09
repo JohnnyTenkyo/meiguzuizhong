@@ -533,6 +533,8 @@ export default function VIPNewsFlow({ watchlistTickers = [] }: { watchlistTicker
                         org: "",
                         category: "商业",
                         avatarEmoji: person.avatarEmoji,
+                        twitterHandle: person.twitterHandle,
+                        truthSocialHandle: person.truthSocialHandle,
                         relatedTickers: [person.ticker],
                       });
                     }}
